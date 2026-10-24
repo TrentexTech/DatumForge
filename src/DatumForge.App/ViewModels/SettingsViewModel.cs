@@ -28,6 +28,7 @@ public static class ShortcutCatalog
         new(KeyBindingDefaults.Rotate, "Rotate tool", "Modify", "Rotate"),
         new(KeyBindingDefaults.Scale, "Scale tool", "Modify", "Scale"),
         new(KeyBindingDefaults.ToggleGrid, "Toggle grid", "View"),
+        new(KeyBindingDefaults.ToggleOrtho, "Toggle orthographic tracking", "View"),
         new(KeyBindingDefaults.ToggleGridSnap, "Toggle grid snap", "View"),
         new(KeyBindingDefaults.ToggleObjectSnap, "Toggle object snap", "View")
     ];

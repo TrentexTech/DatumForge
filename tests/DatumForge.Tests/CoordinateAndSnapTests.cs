@@ -108,3 +108,23 @@ public sealed class ObjectSnapperTests
     private static DrawingEntity Line(Guid layerId, CadPoint start, CadPoint end) =>
         new() { Kind = EntityKind.Line, LayerId = layerId, Points = [start, end] };
 }
+
+public sealed class TrackingConstraintsTests
+{
+    [Theory]
+    [InlineData(10, 3, 10, 0)]
+    [InlineData(-10, 3, -10, 0)]
+    [InlineData(3, 10, 0, 10)]
+    [InlineData(3, -10, 0, -10)]
+    [InlineData(5, 5, 5, 0)]
+    public void OrthographicTrackingKeepsTheDominantAxis(
+        double targetX,
+        double targetY,
+        double expectedX,
+        double expectedY)
+    {
+        var constrained = TrackingConstraints.ApplyOrthographic(default, new CadPoint(targetX, targetY));
+
+        Assert.Equal(new CadPoint(expectedX, expectedY), constrained);
+    }
+}

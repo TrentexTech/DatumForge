@@ -152,6 +152,21 @@ public sealed class MainViewModelTests : IDisposable
         Assert.Equal(new CadPoint(20, -10), reopened.SelectedLayout.Pan);
     }
 
+    [Fact]
+    public async Task OrthoCommandTogglesLayoutTrackingAndMarksProjectUnsaved()
+    {
+        var store = new ProjectStore();
+        var workspace = await store.CreateAsync(Path.Combine(_directory, "ortho"), "Ortho");
+        var viewModel = new MainViewModel(store, new UserSettingsStore(Path.Combine(_directory, "settings")));
+        await viewModel.OpenProjectAsync(workspace.ProjectFilePath);
+
+        Assert.True(viewModel.TryExecuteTextCommand("ortho"));
+
+        Assert.True(viewModel.SelectedLayout!.OrthographicTracking);
+        Assert.Equal("Ortho on", viewModel.OrthoStatus);
+        Assert.True(viewModel.HasUnsavedWork);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);

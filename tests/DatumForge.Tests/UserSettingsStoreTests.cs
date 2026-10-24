@@ -58,6 +58,7 @@ public sealed class UserSettingsStoreTests : IDisposable
         Assert.Equal("Ctrl+Shift+S", settings.KeyBindings[KeyBindingDefaults.Save]);
         Assert.Equal("Ctrl+Z", settings.KeyBindings[KeyBindingDefaults.Undo]);
         Assert.Equal("F7", settings.KeyBindings[KeyBindingDefaults.ToggleGrid]);
+        Assert.Equal("F8", settings.KeyBindings[KeyBindingDefaults.ToggleOrtho]);
     }
 
     [Fact]

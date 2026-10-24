@@ -279,10 +279,16 @@ public sealed class DrawingViewport : Control
                 Layout.ObjectSnaps)
             : null;
         if (_snapResult is not null) return _snapResult.Point;
-        if (Layout?.SnapToGrid != true || Layout.GridSpacing <= 0) return point;
-        return new CadPoint(
-            Math.Round(point.X / Layout.GridSpacing) * Layout.GridSpacing,
-            Math.Round(point.Y / Layout.GridSpacing) * Layout.GridSpacing);
+        if (Layout?.SnapToGrid == true && Layout.GridSpacing > 0)
+        {
+            point = new CadPoint(
+                Math.Round(point.X / Layout.GridSpacing) * Layout.GridSpacing,
+                Math.Round(point.Y / Layout.GridSpacing) * Layout.GridSpacing);
+        }
+
+        return Layout?.OrthographicTracking == true && _anchor is { } anchor
+            ? TrackingConstraints.ApplyOrthographic(anchor, point)
+            : point;
     }
 
     private void RequestTransform(EntityTransformKind kind, CadPoint point)

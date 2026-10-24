@@ -88,6 +88,7 @@ public partial class MainViewModel : ViewModelBase
     public DrawingDocument? ActiveDrawing => SelectedDrawingTab?.Document;
     public string WindowTitle => SelectedProjectTab?.Workspace is { } workspace ? $"{workspace.Project.Name} — DatumForge" : "DatumForge";
     public string GridStatus => SelectedLayout?.ShowGrid == true ? "Grid on" : "Grid off";
+    public string OrthoStatus => SelectedLayout?.OrthographicTracking == true ? "Ortho on" : "Ortho off";
     public string SnapStatus => SelectedLayout?.SnapToGrid == true ? "Grid snap on" : "Grid snap off";
     public string ObjectSnapStatus => SelectedLayout?.SnapToObjects == true ? "Object snap on" : "Object snap off";
     public string ToolStatus => $"TOOL: {ActiveTool.ToUpperInvariant()}";
@@ -370,6 +371,10 @@ public partial class MainViewModel : ViewModelBase
                 ToggleSnap();
                 StatusText = SnapStatus;
                 break;
+            case "ortho":
+                ToggleOrtho();
+                StatusText = OrthoStatus;
+                break;
             case "osnap":
                 ToggleObjectSnap();
                 StatusText = ObjectSnapStatus;
@@ -593,6 +598,15 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void ToggleOrtho()
+    {
+        if (SelectedLayout is null) return;
+        SelectedLayout.OrthographicTracking = !SelectedLayout.OrthographicTracking;
+        MarkActiveWorkDirty();
+        RefreshLayoutState();
+    }
+
+    [RelayCommand]
     private void ToggleSnap()
     {
         if (SelectedLayout is null) return;
@@ -637,6 +651,7 @@ public partial class MainViewModel : ViewModelBase
     {
         ViewportRevision++;
         OnPropertyChanged(nameof(GridStatus));
+        OnPropertyChanged(nameof(OrthoStatus));
         OnPropertyChanged(nameof(SnapStatus));
         OnPropertyChanged(nameof(ObjectSnapStatus));
         OnPropertyChanged(nameof(SnapEndpointEnabled));

@@ -169,6 +169,7 @@ public static class KeyBindingDefaults
     public const string Rotate = "tool.rotate";
     public const string Scale = "tool.scale";
     public const string ToggleGrid = "view.toggle-grid";
+    public const string ToggleOrtho = "view.toggle-ortho";
     public const string ToggleGridSnap = "view.toggle-grid-snap";
     public const string ToggleObjectSnap = "view.toggle-object-snap";
 
@@ -190,6 +191,7 @@ public static class KeyBindingDefaults
         [Rotate] = string.Empty,
         [Scale] = string.Empty,
         [ToggleGrid] = "F7",
+        [ToggleOrtho] = "F8",
         [ToggleGridSnap] = "F9",
         [ToggleObjectSnap] = "F3"
     };

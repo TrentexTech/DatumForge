@@ -4,7 +4,7 @@ DatumForge currently writes two UTF-8 JSON formats.
 
 ## `.dfproj`
 
-The project manifest contains a stable project ID, settings and arbitrary properties, layout definitions, and relative references to drawings. Each layout stores its viewport background, grid visibility/spacing, grid-snap state, object-snap state, enabled object-snap modes, and an ordered list of viewport modules with their resized widths. Transient pan and zoom positions are deliberately excluded and stored in the user's local DatumForge settings instead. Drawing paths must resolve inside the directory containing the project file.
+The project manifest contains a stable project ID, settings and arbitrary properties, layout definitions, and relative references to drawings. Each layout stores its viewport background, grid visibility/spacing, grid-snap state, orthographic-tracking state, object-snap state, enabled object-snap modes, and an ordered list of viewport modules with their resized widths. Transient pan and zoom positions are deliberately excluded and stored in the user's local DatumForge settings instead. Drawing paths must resolve inside the directory containing the project file.
 
 ## `.dfdraw`
 

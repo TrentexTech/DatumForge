@@ -60,6 +60,7 @@ public sealed class ProjectStoreTests : IDisposable
         layer.Group = "Annotations";
         var layout = Assert.Single(workspace.Project.Layouts);
         layout.SnapToObjects = false;
+        layout.OrthographicTracking = true;
         layout.ObjectSnaps = ObjectSnapMode.Endpoint | ObjectSnapMode.Center;
         layout.ViewportModules =
         [
@@ -79,6 +80,7 @@ public sealed class ProjectStoreTests : IDisposable
         Assert.Single(loadedDrawing.Entities);
         var loadedLayout = Assert.Single(loaded.Project.Layouts);
         Assert.False(loadedLayout.SnapToObjects);
+        Assert.True(loadedLayout.OrthographicTracking);
         Assert.Equal(ObjectSnapMode.Endpoint | ObjectSnapMode.Center, loadedLayout.ObjectSnaps);
         Assert.Equal([ViewportModuleKind.Viewer, ViewportModuleKind.Layers], loadedLayout.ViewportModules.Select(module => module.Kind));
         Assert.Equal(310, loadedLayout.ViewportModules[1].Size);

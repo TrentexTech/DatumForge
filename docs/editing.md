@@ -39,7 +39,11 @@ The narrow command bar below the viewport accepts tool names and precise points.
 
 Relative points use the active tool's first point as their origin. Typed coordinates are exact and therefore do not pass through grid or object snapping.
 
-Commands include `select` (`sel`), `line` (`l`), `polyline` (`pl`), `circle` (`c`), `rectangle` (`rect`), `text` (`t`), `dimension` (`dim`), `move` (`m`), `copy` (`co`), `rotate` (`ro`), `scale` (`sc`), `erase` (`e`), `undo` (`u`), `redo`, `grid`, `snap`, and `osnap`.
+Commands include `select` (`sel`), `line` (`l`), `polyline` (`pl`), `circle` (`c`), `rectangle` (`rect`), `text` (`t`), `dimension` (`dim`), `move` (`m`), `copy` (`co`), `rotate` (`ro`), `scale` (`sc`), `erase` (`e`), `undo` (`u`), `redo`, `grid`, `ortho`, `snap`, and `osnap`.
+
+## Orthographic tracking
+
+Press **F8**, use the **Ortho** view control, or enter `ortho` to constrain pointer input to the dominant horizontal or vertical axis from the active tool's first point. Exact object snaps take precedence over orthographic tracking; otherwise grid snapping is applied before the axis constraint. Typed coordinates remain exact and are not constrained.
 
 ## Object snaps
 

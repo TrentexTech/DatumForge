@@ -57,6 +57,7 @@ public partial class MainWindow : Window
                 KeyBindingDefaults.Redo => ViewModel.RedoCommand,
                 KeyBindingDefaults.Erase => ViewModel.EraseCommand,
                 KeyBindingDefaults.ToggleGrid => ViewModel.ToggleGridCommand,
+                KeyBindingDefaults.ToggleOrtho => ViewModel.ToggleOrthoCommand,
                 KeyBindingDefaults.ToggleGridSnap => ViewModel.ToggleSnapCommand,
                 KeyBindingDefaults.ToggleObjectSnap => ViewModel.ToggleObjectSnapCommand,
                 _ when definition.CommandParameter is not null => ViewModel.SelectToolCommand,

@@ -16,7 +16,7 @@
 - command line plus absolute, relative Cartesian, and relative polar point entry — complete
 - extend the transaction journal to property edits
 - endpoint, midpoint, center, and line-segment intersection object snaps — complete
-- orthographic and polar tracking
+- orthographic tracking — complete; polar tracking remains
 - precision geometry and spatial indexing
 
 ## Documentation and interchange
