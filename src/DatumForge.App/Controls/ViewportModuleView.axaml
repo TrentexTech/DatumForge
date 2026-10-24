@@ -61,6 +61,8 @@
                                       SelectionChanged="Viewport_OnSelectionChanged"
                                       TransformRequested="Viewport_OnTransformRequested"
                                       ViewChanged="Viewport_OnViewChanged"
+                                      InteractionCancelled="Viewport_OnInteractionCancelled"
+                                      SelectToolRequested="Viewport_OnSelectToolRequested"
                                       Focusable="True" />
         </Border>
 

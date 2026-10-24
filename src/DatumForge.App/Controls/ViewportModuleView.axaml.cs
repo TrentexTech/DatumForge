@@ -18,6 +18,8 @@ public partial class ViewportModuleView : UserControl
 
     public CoordinateSubmissionResult SubmitCoordinate(string? input) => DrawingSurface.SubmitCoordinate(input);
 
+    public bool HandleEscape() => DrawingSurface.HandleEscape();
+
     private void Viewport_OnEntityCreated(object? sender, EntityCreatedEventArgs e) => ViewModel?.Owner.RecordEntityCreated(e.Entity);
 
     private void Viewport_OnSelectionChanged(object? sender, EntitySelectionChangedEventArgs e) =>
@@ -25,6 +27,14 @@ public partial class ViewportModuleView : UserControl
 
     private void Viewport_OnTransformRequested(object? sender, EntityTransformRequestedEventArgs e) =>
         ViewModel?.Owner.ApplyTransform(e.Kind, e.EntityIds, e.Reference, e.Target);
+
+    private void Viewport_OnInteractionCancelled(object? sender, EventArgs e)
+    {
+        if (ViewModel?.Owner is { } owner) owner.StatusText = $"Cancelled {owner.ActiveTool} operation";
+    }
+
+    private void Viewport_OnSelectToolRequested(object? sender, EventArgs e) =>
+        ViewModel?.Owner.SelectToolCommand.Execute("Select");
 
     private void Viewport_OnViewChanged(object? sender, EventArgs e)
     {

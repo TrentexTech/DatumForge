@@ -13,7 +13,8 @@
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="36"
         WindowDecorations="None"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        KeyDown="MainWindow_OnKeyDown">
 
     <Grid RowDefinitions="36,*">
         <!-- Integrated title bar with native window-behavior roles. -->

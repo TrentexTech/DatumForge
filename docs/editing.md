@@ -16,7 +16,7 @@ DatumForge keeps viewport interaction separate from drawing mutations. The viewp
 - Hold **Ctrl** or **Shift** while clicking to toggle entities in the selection set.
 - Selected entities use a cyan highlight with white endpoint grips.
 - Hidden-layer entities are not selectable. Locked-layer entities may be selected for inspection but are excluded from editing operations.
-- Press **Escape** to cancel the active reference point and clear selection.
+- Press **Escape** while a point operation is active to cancel that operation and keep its tool. With no operation active, **Escape** returns to Select; in Select it clears the current selection.
 
 ## Modify tools
 

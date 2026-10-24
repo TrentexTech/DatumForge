@@ -15,6 +15,8 @@ public sealed class DrawingViewport : Control
     public event EventHandler<EntitySelectionChangedEventArgs>? SelectionChanged;
     public event EventHandler<EntityTransformRequestedEventArgs>? TransformRequested;
     public event EventHandler? ViewChanged;
+    public event EventHandler? InteractionCancelled;
+    public event EventHandler? SelectToolRequested;
 
     public static readonly StyledProperty<DrawingDocument?> DrawingProperty =
         AvaloniaProperty.Register<DrawingViewport, DrawingDocument?>(nameof(Drawing));
@@ -223,12 +225,30 @@ public sealed class DrawingViewport : Control
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (e.Key == Key.Escape)
+        if (e.Key == Key.Escape && HandleEscape()) e.Handled = true;
+    }
+
+    public bool HandleEscape()
+    {
+        switch (ViewportEscapeBehavior.Decide(Drawing is not null, _anchor is not null, ActiveTool))
         {
-            ResetInteraction();
-            ClearSelection();
-            RefreshPointerFeedback();
-            e.Handled = true;
+            case ViewportEscapeAction.CancelInteraction:
+                ResetInteraction();
+                RefreshPointerFeedback();
+                InteractionCancelled?.Invoke(this, EventArgs.Empty);
+                return true;
+
+            case ViewportEscapeAction.SelectTool:
+                SelectToolRequested?.Invoke(this, EventArgs.Empty);
+                return true;
+
+            case ViewportEscapeAction.ClearSelection:
+                ClearSelection();
+                RefreshPointerFeedback();
+                return true;
+
+            default:
+                return false;
         }
     }
 

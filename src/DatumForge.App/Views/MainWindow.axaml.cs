@@ -144,6 +144,20 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void MainWindow_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape) return;
+        if (ViewportModulesHost.HandleEscape())
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (ViewModel.ActiveTool == "Select") return;
+        ViewModel.SelectToolCommand.Execute("Select");
+        e.Handled = true;
+    }
+
     private void CoordinateSubmit_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SubmitCoordinate();
 
     private void SubmitCoordinate()

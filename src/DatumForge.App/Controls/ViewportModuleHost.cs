@@ -37,6 +37,12 @@ public sealed class ViewportModuleHost : Grid
                ?? new CoordinateSubmissionResult(false, false, "Add the Viewer module before entering coordinates.");
     }
 
+    public bool HandleEscape()
+    {
+        var viewer = _moduleViews.FirstOrDefault(view => view.ViewModel?.IsViewer == true);
+        return viewer?.HandleEscape() == true;
+    }
+
     private void OnItemsSourceChanged(IEnumerable<ViewportModuleItemViewModel>? oldValue,
         IEnumerable<ViewportModuleItemViewModel>? newValue)
     {
