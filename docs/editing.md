@@ -29,6 +29,8 @@ Select entities before choosing a modify tool. Object snapping is evaluated befo
 
 Degenerate operations, such as a zero-distance move or a rotation reference at the pivot, do not create journal entries.
 
+Before the first click, the viewport marks the resolved insertion or reference point beneath the pointer and extends horizontal and vertical alignment guides across the viewport. After that point is set, a dimmer guide pair stays anchored to the first point while a brighter pair follows the moving preview point. Line-like tools and transforms show a reference-to-target guide, rectangles show their pending bounds, and circles show their pending radius. Both preview stages use the same object-snap, grid-snap, and orthographic result that the next click will commit.
+
 ## Command and coordinate entry
 
 The narrow command bar below the viewport accepts tool names and precise points. Press **Enter** or click the arrow button to submit an entry.

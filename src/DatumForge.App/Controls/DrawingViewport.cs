@@ -26,6 +26,7 @@ public sealed class DrawingViewport : Control
         AvaloniaProperty.Register<DrawingViewport, int>(nameof(RevisionToken));
 
     private CadPoint? _anchor;
+    private CadPoint? _previewPoint;
     private ObjectSnapResult? _snapResult;
     private readonly HashSet<Guid> _selectedEntityIds = [];
     private Point? _lastPanPosition;
@@ -59,6 +60,11 @@ public sealed class DrawingViewport : Control
             DrawEntity(context, entity, layer, _selectedEntityIds.Contains(entity.Id));
         }
 
+        if (_anchor is { } previewAnchor && _previewPoint is { } previewPoint)
+            DrawInteractionPreview(context, previewAnchor, previewPoint);
+        else if (_previewPoint is { } firstPoint)
+            DrawFirstPointPreview(context, firstPoint);
+
         if (_snapResult is not null) DrawObjectSnapMarker(context, _snapResult);
 
         if (_anchor is { } anchor)
@@ -81,6 +87,8 @@ public sealed class DrawingViewport : Control
         Focus();
         if (Layout is not null && e.GetCurrentPoint(this).Properties.IsMiddleButtonPressed)
         {
+            _previewPoint = null;
+            _snapResult = null;
             _lastPanPosition = e.GetPosition(this);
             _panChangeReported = false;
             Cursor = PanningCursor;
@@ -121,20 +129,26 @@ public sealed class DrawingViewport : Control
             return;
         }
 
-        if (Drawing is null || ActiveTool == "Select" || Layout?.SnapToObjects != true)
+        if (Drawing is null || ActiveTool == "Select")
         {
-            if (_snapResult is null) return;
+            if (_snapResult is null && _previewPoint is null) return;
             _snapResult = null;
+            _previewPoint = null;
             InvalidateVisual();
             return;
         }
 
         var pointer = ToWorld(e.GetPosition(this));
-        _snapResult = ObjectSnapper.FindNearest(
-            Drawing,
-            pointer,
-            12 / Math.Max(0.001, Layout.Zoom),
-            Layout.ObjectSnaps);
+        _previewPoint = ResolvePointerPoint(pointer);
+        InvalidateVisual();
+    }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        if (_previewPoint is null && _snapResult is null) return;
+        _previewPoint = null;
+        _snapResult = null;
         InvalidateVisual();
     }
 
@@ -180,7 +194,10 @@ public sealed class DrawingViewport : Control
         if (view.Zoom == Layout.Zoom && view.Pan == Layout.Pan) return;
         Layout.Zoom = view.Zoom;
         Layout.Pan = view.Pan;
-        _snapResult = null;
+        _previewPoint = Drawing is not null && ActiveTool != "Select"
+            ? ResolvePointerPoint(ToWorld(pointer))
+            : null;
+        if (_previewPoint is null) _snapResult = null;
         InvalidateVisual();
         ViewChanged?.Invoke(this, EventArgs.Empty);
         e.Handled = true;
@@ -192,6 +209,8 @@ public sealed class DrawingViewport : Control
         if (e.Key == Key.Escape)
         {
             _anchor = null;
+            _previewPoint = null;
+            _snapResult = null;
             ClearSelection();
             e.Handled = true;
         }
@@ -220,6 +239,7 @@ public sealed class DrawingViewport : Control
     private void ResetInteraction()
     {
         _anchor = null;
+        _previewPoint = null;
         _snapResult = null;
         InvalidateVisual();
     }
@@ -233,6 +253,7 @@ public sealed class DrawingViewport : Control
             if (_anchor is null)
             {
                 _anchor = point;
+                _previewPoint = point;
                 InvalidateVisual();
                 return CoordinateSubmissionResult.Accepted($"Reference point set to {FormatPoint(point)}; enter the target point.");
             }
@@ -249,12 +270,14 @@ public sealed class DrawingViewport : Control
         if (_anchor is null)
         {
             _anchor = point;
+            _previewPoint = point;
             InvalidateVisual();
             return CoordinateSubmissionResult.Accepted($"First point set to {FormatPoint(point)}; enter the next point.");
         }
 
         var first = _anchor.Value;
         _anchor = null;
+        _previewPoint = null;
         var kind = ActiveTool switch
         {
             "Circle" => EntityKind.Circle,
@@ -303,6 +326,7 @@ public sealed class DrawingViewport : Control
 
         var reference = _anchor.Value;
         _anchor = null;
+        _previewPoint = null;
         TransformRequested?.Invoke(this, new EntityTransformRequestedEventArgs(
             kind, [.. _selectedEntityIds], reference, point));
         InvalidateVisual();
@@ -358,6 +382,65 @@ public sealed class DrawingViewport : Control
                 context.DrawLine(pen, new Point(point.X - size, point.Y + size), new Point(point.X + size, point.Y - size));
                 break;
         }
+    }
+
+    private void DrawInteractionPreview(DrawingContext context, CadPoint anchor, CadPoint target)
+    {
+        if (ActiveTool is "Select" or "Text") return;
+        var isTransform = Enum.TryParse<EntityTransformKind>(ActiveTool, out _);
+        var brush = new SolidColorBrush(Color.Parse(isTransform ? "#F4B95E" : "#67D6AD")) { Opacity = 0.8 };
+        var pen = new Pen(brush, 1.5, dashStyle: new DashStyle([6, 4], 0));
+        var first = ToScreen(anchor);
+        var second = ToScreen(target);
+        DrawAlignmentGuides(context, first, isTransform, 0.4);
+        DrawAlignmentGuides(context, second, isTransform, 0.75);
+
+        switch (ActiveTool)
+        {
+            case "Circle":
+                var radius = Math.Sqrt(Math.Pow(target.X - anchor.X, 2) + Math.Pow(target.Y - anchor.Y, 2)) *
+                             (Layout?.Zoom ?? 1);
+                context.DrawEllipse(null, pen, new Rect(first.X - radius, first.Y - radius, radius * 2, radius * 2));
+                break;
+            case "Rectangle":
+                context.DrawRectangle(null, pen, new Rect(first, second));
+                break;
+            case "Line":
+            case "Polyline":
+            case "Dimension":
+            case "Move":
+            case "Copy":
+            case "Rotate":
+            case "Scale":
+                context.DrawLine(pen, first, second);
+                break;
+            default:
+                return;
+        }
+
+        context.DrawEllipse(brush, null, new Rect(second.X - 3, second.Y - 3, 6, 6));
+    }
+
+    private void DrawFirstPointPreview(DrawingContext context, CadPoint point)
+    {
+        if (ActiveTool == "Select") return;
+        var screen = ToScreen(point);
+        var brush = new SolidColorBrush(Color.Parse("#67D6AD")) { Opacity = 0.85 };
+        var pen = new Pen(brush, 1.25);
+        const double radius = 5;
+        const double arm = 9;
+        DrawAlignmentGuides(context, screen, false, 0.65);
+        context.DrawEllipse(null, pen, new Rect(screen.X - radius, screen.Y - radius, radius * 2, radius * 2));
+        context.DrawLine(pen, new Point(screen.X - arm, screen.Y), new Point(screen.X + arm, screen.Y));
+        context.DrawLine(pen, new Point(screen.X, screen.Y - arm), new Point(screen.X, screen.Y + arm));
+    }
+
+    private void DrawAlignmentGuides(DrawingContext context, Point point, bool isTransform, double opacity)
+    {
+        var brush = new SolidColorBrush(Color.Parse(isTransform ? "#9D783D" : "#347B66")) { Opacity = opacity };
+        var pen = new Pen(brush, 1, dashStyle: new DashStyle([3, 5], 0));
+        context.DrawLine(pen, new Point(0, point.Y), new Point(Bounds.Width, point.Y));
+        context.DrawLine(pen, new Point(point.X, 0), new Point(point.X, Bounds.Height));
     }
 
     private void DrawGrid(DrawingContext context)

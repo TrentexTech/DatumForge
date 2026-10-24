@@ -19,7 +19,7 @@ DatumForge is an open-source, cross-platform 2D CAD workspace built with C#, .NE
 - explicit warning when a project-associated drawing is opened without its owning project
 - tests for serialization, history, version handling, association safety, hit testing, and edit journaling
 
-The geometry editor now includes single and additive selection, endpoint grips, locked-layer-aware erase, two-point move/copy/rotate/scale workflows, coordinate entry, orthographic tracking, object snaps, and per-drawing undo/redo for every current geometry edit. Constraints, polar tracking, references, DXF/DWG interoperability, printing, and production-grade CAD kernels remain future work.
+The geometry editor now includes single and additive selection, endpoint grips, live shape and transform guides, locked-layer-aware erase, two-point move/copy/rotate/scale workflows, coordinate entry, orthographic tracking, object snaps, and per-drawing undo/redo for every current geometry edit. Constraints, polar tracking, references, DXF/DWG interoperability, printing, and production-grade CAD kernels remain future work.
 
 Select an entity by clicking it with the Select tool. Hold Ctrl or Shift to toggle entities in the selection set. Drag with the middle mouse button to pan and use the mouse wheel to zoom around the pointer. Delete or Backspace erases the selection; Ctrl+Z undoes and Ctrl+Y or Ctrl+Shift+Z redoes while the viewport has focus.
 
