@@ -1,5 +1,15 @@
 namespace DatumForge.Core.Models;
 
+[Flags]
+public enum ObjectSnapMode
+{
+    None = 0,
+    Endpoint = 1,
+    Midpoint = 2,
+    Center = 4,
+    Intersection = 8
+}
+
 public sealed class ProjectDocument
 {
     public const int CurrentFormatVersion = 1;
@@ -37,6 +47,9 @@ public sealed class LayoutDefinition
     public string BackgroundColor { get; set; } = "#101419";
     public bool ShowGrid { get; set; } = true;
     public bool SnapToGrid { get; set; } = true;
+    public bool SnapToObjects { get; set; } = true;
+    public ObjectSnapMode ObjectSnaps { get; set; } =
+        ObjectSnapMode.Endpoint | ObjectSnapMode.Midpoint | ObjectSnapMode.Center | ObjectSnapMode.Intersection;
     public bool ShowLineWeights { get; set; } = true;
     public double GridSpacing { get; set; } = 25;
     public double Zoom { get; set; } = 1;

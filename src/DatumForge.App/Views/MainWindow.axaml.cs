@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using DatumForge.App.ViewModels;
 using DatumForge.App.Controls;
@@ -22,6 +23,27 @@ public partial class MainWindow : Window
     private void Viewport_OnRedoRequested(object? sender, EventArgs e) => ViewModel.RedoCommand.Execute(null);
     private void Viewport_OnTransformRequested(object? sender, EntityTransformRequestedEventArgs e) =>
         ViewModel.ApplyTransform(e.Kind, e.EntityIds, e.Reference, e.Target);
+
+    private void CoordinateInput_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+        SubmitCoordinate();
+        e.Handled = true;
+    }
+
+    private void CoordinateSubmit_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SubmitCoordinate();
+
+    private void SubmitCoordinate()
+    {
+        if (ViewModel.TryExecuteTextCommand(ViewModel.CoordinateInputText))
+        {
+            CoordinateInput.Focus();
+            return;
+        }
+        var result = DrawingSurface.SubmitCoordinate(ViewModel.CoordinateInputText);
+        ViewModel.ReportCoordinateSubmission(result.Success, result.Completed, result.Message);
+        if (result.Success) CoordinateInput.Focus();
+    }
 
     private async void NewProject_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {

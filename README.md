@@ -9,7 +9,8 @@ DatumForge is an open-source, cross-platform 2D CAD workspace built with C#, .NE
 
 - CAD-style top ribbon with file actions and drawing tools
 - separate tabs for welcome/open projects and open drawings
-- interactive 2D viewport with grid, snapping, zoom-aware rendering, and basic line, polyline, circle, rectangle, text, and dimension entities
+- interactive 2D viewport with grid snapping, endpoint/midpoint/center/intersection object snaps, zoom-aware rendering, and basic line, polyline, circle, rectangle, text, and dimension entities
+- CAD-style command and coordinate entry supporting absolute, relative Cartesian, and relative polar points
 - per-project layouts with an Excel-like bottom switcher and layout-specific display options
 - layers with visibility, locking, color, linetype, lineweight, opacity, printability, and grouping in the file model
 - portable `.dfproj` project manifests and `.dfdraw` drawing documents
@@ -17,11 +18,11 @@ DatumForge is an open-source, cross-platform 2D CAD workspace built with C#, .NE
 - explicit warning when a project-associated drawing is opened without its owning project
 - tests for serialization, history, version handling, association safety, hit testing, and edit journaling
 
-The geometry editor now includes single and additive selection, endpoint grips, locked-layer-aware erase, two-point move/copy/rotate/scale workflows, and per-drawing undo/redo for every current geometry edit. Constraints, numeric precision input, references, DXF/DWG interoperability, printing, and production-grade CAD kernels remain future work.
+The geometry editor now includes single and additive selection, endpoint grips, locked-layer-aware erase, two-point move/copy/rotate/scale workflows, coordinate entry, object snaps, and per-drawing undo/redo for every current geometry edit. Constraints, orthographic/polar tracking, references, DXF/DWG interoperability, printing, and production-grade CAD kernels remain future work.
 
 Select an entity by clicking it with the Select tool. Hold Ctrl or Shift to toggle entities in the selection set. Delete or Backspace erases the selection; Ctrl+Z undoes and Ctrl+Y or Ctrl+Shift+Z redoes while the viewport has focus.
 
-See [docs/editing.md](docs/editing.md) for transform input and journal behavior.
+See [docs/editing.md](docs/editing.md) for command, coordinate, snap, transform, and journal behavior.
 
 ## Windows builds
 

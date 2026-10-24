@@ -26,6 +26,7 @@ public sealed class DrawingViewport : Control
         AvaloniaProperty.Register<DrawingViewport, int>(nameof(RevisionToken));
 
     private CadPoint? _anchor;
+    private ObjectSnapResult? _snapResult;
     private readonly HashSet<Guid> _selectedEntityIds = [];
 
     static DrawingViewport()
@@ -56,6 +57,8 @@ public sealed class DrawingViewport : Control
             DrawEntity(context, entity, layer, _selectedEntityIds.Contains(entity.Id));
         }
 
+        if (_snapResult is not null) DrawObjectSnapMarker(context, _snapResult);
+
         if (_anchor is { } anchor)
         {
             var marker = ToScreen(anchor);
@@ -82,44 +85,28 @@ public sealed class DrawingViewport : Control
             return;
         }
 
-        if (Layout?.SnapToGrid == true && Layout.GridSpacing > 0)
-        {
-            point = new CadPoint(
-                Math.Round(point.X / Layout.GridSpacing) * Layout.GridSpacing,
-                Math.Round(point.Y / Layout.GridSpacing) * Layout.GridSpacing);
-        }
+        point = ResolvePointerPoint(point);
+        ProcessInputPoint(point);
+    }
 
-        if (Enum.TryParse<EntityTransformKind>(ActiveTool, out var transformKind))
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        if (Drawing is null || ActiveTool == "Select" || Layout?.SnapToObjects != true)
         {
-            RequestTransform(transformKind, point);
-            return;
-        }
-
-        if (ActiveTool == "Text")
-        {
-            AddEntity(EntityKind.Text, [point], 0, "Note");
-            return;
-        }
-
-        if (_anchor is null)
-        {
-            _anchor = point;
+            if (_snapResult is null) return;
+            _snapResult = null;
             InvalidateVisual();
             return;
         }
 
-        var first = _anchor.Value;
-        _anchor = null;
-        var kind = ActiveTool switch
-        {
-            "Circle" => EntityKind.Circle,
-            "Rectangle" => EntityKind.Rectangle,
-            "Polyline" => EntityKind.Polyline,
-            "Dimension" => EntityKind.Dimension,
-            _ => EntityKind.Line
-        };
-        var radius = Math.Sqrt(Math.Pow(point.X - first.X, 2) + Math.Pow(point.Y - first.Y, 2));
-        AddEntity(kind, [first, point], radius, null);
+        var pointer = ToWorld(e.GetPosition(this));
+        _snapResult = ObjectSnapper.FindNearest(
+            Drawing,
+            pointer,
+            12 / Math.Max(0.001, Layout.Zoom),
+            Layout.ObjectSnaps);
+        InvalidateVisual();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -159,10 +146,84 @@ public sealed class DrawingViewport : Control
         InvalidateVisual();
     }
 
+    public CoordinateSubmissionResult SubmitCoordinate(string? input)
+    {
+        if (Drawing is null) return CoordinateSubmissionResult.Failure("Open a drawing before entering coordinates.");
+        if (ActiveTool == "Select") return CoordinateSubmissionResult.Failure("Choose a drawing or modify tool before entering coordinates.");
+        if (!CoordinateParser.TryResolve(input, _anchor, out var point, out var error))
+            return CoordinateSubmissionResult.Failure(error);
+
+        var result = ProcessInputPoint(point);
+        InvalidateVisual();
+        return result;
+    }
+
     private void ResetInteraction()
     {
         _anchor = null;
+        _snapResult = null;
         InvalidateVisual();
+    }
+
+    private CoordinateSubmissionResult ProcessInputPoint(CadPoint point)
+    {
+        if (Enum.TryParse<EntityTransformKind>(ActiveTool, out var transformKind))
+        {
+            if (_selectedEntityIds.Count == 0)
+                return CoordinateSubmissionResult.Failure("Select entities before entering transform coordinates.");
+            if (_anchor is null)
+            {
+                _anchor = point;
+                InvalidateVisual();
+                return CoordinateSubmissionResult.Accepted($"Reference point set to {FormatPoint(point)}; enter the target point.");
+            }
+
+            RequestTransform(transformKind, point);
+            return CoordinateSubmissionResult.CompletedInput("Transform applied.");
+        }
+
+        if (ActiveTool == "Text")
+            return AddEntity(EntityKind.Text, [point], 0, "Note")
+                ? CoordinateSubmissionResult.CompletedInput("Text created.")
+                : CoordinateSubmissionResult.Failure("No visible, unlocked layer is available.");
+
+        if (_anchor is null)
+        {
+            _anchor = point;
+            InvalidateVisual();
+            return CoordinateSubmissionResult.Accepted($"First point set to {FormatPoint(point)}; enter the next point.");
+        }
+
+        var first = _anchor.Value;
+        _anchor = null;
+        var kind = ActiveTool switch
+        {
+            "Circle" => EntityKind.Circle,
+            "Rectangle" => EntityKind.Rectangle,
+            "Polyline" => EntityKind.Polyline,
+            "Dimension" => EntityKind.Dimension,
+            _ => EntityKind.Line
+        };
+        var radius = Math.Sqrt(Math.Pow(point.X - first.X, 2) + Math.Pow(point.Y - first.Y, 2));
+        return AddEntity(kind, [first, point], radius, null)
+            ? CoordinateSubmissionResult.CompletedInput($"{kind} created.")
+            : CoordinateSubmissionResult.Failure("No visible, unlocked layer is available.");
+    }
+
+    private CadPoint ResolvePointerPoint(CadPoint point)
+    {
+        _snapResult = Layout?.SnapToObjects == true && Drawing is not null
+            ? ObjectSnapper.FindNearest(
+                Drawing,
+                point,
+                12 / Math.Max(0.001, Layout.Zoom),
+                Layout.ObjectSnaps)
+            : null;
+        if (_snapResult is not null) return _snapResult.Point;
+        if (Layout?.SnapToGrid != true || Layout.GridSpacing <= 0) return point;
+        return new CadPoint(
+            Math.Round(point.X / Layout.GridSpacing) * Layout.GridSpacing,
+            Math.Round(point.Y / Layout.GridSpacing) * Layout.GridSpacing);
     }
 
     private void RequestTransform(EntityTransformKind kind, CadPoint point)
@@ -198,13 +259,40 @@ public sealed class DrawingViewport : Control
         InvalidateVisual();
     }
 
-    private void AddEntity(EntityKind kind, List<CadPoint> points, double radius, string? text)
+    private bool AddEntity(EntityKind kind, List<CadPoint> points, double radius, string? text)
     {
         var layer = Drawing!.Layers.FirstOrDefault(item => item.IsVisible && !item.IsLocked);
-        if (layer is null) return;
+        if (layer is null) return false;
         Drawing.Entities.Add(new DrawingEntity { Kind = kind, LayerId = layer.Id, Points = points, Radius = radius, Text = text });
         EntityCreated?.Invoke(this, new EntityCreatedEventArgs(Drawing.Entities[^1]));
         InvalidateVisual();
+        return true;
+    }
+
+    private void DrawObjectSnapMarker(DrawingContext context, ObjectSnapResult snap)
+    {
+        var point = ToScreen(snap.Point);
+        var pen = new Pen(new SolidColorBrush(Color.Parse("#F4B95E")), 1.5);
+        const double size = 6;
+        switch (snap.Kind)
+        {
+            case ObjectSnapKind.Endpoint:
+                context.DrawRectangle(null, pen, new Rect(point.X - size, point.Y - size, size * 2, size * 2));
+                break;
+            case ObjectSnapKind.Midpoint:
+                context.DrawLine(pen, new Point(point.X, point.Y - size), new Point(point.X + size, point.Y));
+                context.DrawLine(pen, new Point(point.X + size, point.Y), new Point(point.X, point.Y + size));
+                context.DrawLine(pen, new Point(point.X, point.Y + size), new Point(point.X - size, point.Y));
+                context.DrawLine(pen, new Point(point.X - size, point.Y), new Point(point.X, point.Y - size));
+                break;
+            case ObjectSnapKind.Center:
+                context.DrawEllipse(null, pen, new Rect(point.X - size, point.Y - size, size * 2, size * 2));
+                break;
+            case ObjectSnapKind.Intersection:
+                context.DrawLine(pen, new Point(point.X - size, point.Y - size), new Point(point.X + size, point.Y + size));
+                context.DrawLine(pen, new Point(point.X - size, point.Y + size), new Point(point.X + size, point.Y - size));
+                break;
+        }
     }
 
     private void DrawGrid(DrawingContext context)
@@ -286,6 +374,16 @@ public sealed class DrawingViewport : Control
         try { return new SolidColorBrush(Color.Parse(value ?? fallback)); }
         catch (FormatException) { return new SolidColorBrush(Color.Parse(fallback)); }
     }
+
+    private static string FormatPoint(CadPoint point) =>
+        FormattableString.Invariant($"{point.X:0.###},{point.Y:0.###}");
+}
+
+public sealed record CoordinateSubmissionResult(bool Success, bool Completed, string Message)
+{
+    public static CoordinateSubmissionResult Failure(string message) => new(false, false, message);
+    public static CoordinateSubmissionResult Accepted(string message) => new(true, false, message);
+    public static CoordinateSubmissionResult CompletedInput(string message) => new(true, true, message);
 }
 
 public sealed class EntityCreatedEventArgs(DrawingEntity entity) : EventArgs

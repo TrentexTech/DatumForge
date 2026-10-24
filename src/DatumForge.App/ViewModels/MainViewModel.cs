@@ -37,12 +37,20 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] public partial int EntityCount { get; set; }
     [ObservableProperty] public partial int SelectedEntityCount { get; set; }
     [ObservableProperty] public partial int ViewportRevision { get; set; }
+    [ObservableProperty] public partial string CoordinateInputText { get; set; } = string.Empty;
 
     public bool IsWelcomeVisible => SelectedProjectTab?.IsWelcome != false;
     public bool IsWorkspaceVisible => !IsWelcomeVisible;
     public bool HasWarning => !string.IsNullOrWhiteSpace(WarningMessage);
     public DrawingDocument? ActiveDrawing => SelectedDrawingTab?.Document;
     public string WindowTitle => SelectedProjectTab?.Workspace is { } workspace ? $"{workspace.Project.Name} — DatumForge" : "DatumForge";
+    public string GridStatus => SelectedLayout?.ShowGrid == true ? "Grid on" : "Grid off";
+    public string SnapStatus => SelectedLayout?.SnapToGrid == true ? "Grid snap on" : "Grid snap off";
+    public string ObjectSnapStatus => SelectedLayout?.SnapToObjects == true ? "Object snap on" : "Object snap off";
+    public bool SnapEndpointEnabled { get => HasSnapMode(ObjectSnapMode.Endpoint); set => SetSnapMode(ObjectSnapMode.Endpoint, value); }
+    public bool SnapMidpointEnabled { get => HasSnapMode(ObjectSnapMode.Midpoint); set => SetSnapMode(ObjectSnapMode.Midpoint, value); }
+    public bool SnapCenterEnabled { get => HasSnapMode(ObjectSnapMode.Center); set => SetSnapMode(ObjectSnapMode.Center, value); }
+    public bool SnapIntersectionEnabled { get => HasSnapMode(ObjectSnapMode.Intersection); set => SetSnapMode(ObjectSnapMode.Intersection, value); }
 
     partial void OnSelectedProjectTabChanged(ProjectTabViewModel? value)
     {
@@ -66,6 +74,8 @@ public partial class MainViewModel : ViewModelBase
     }
 
     partial void OnWarningMessageChanged(string? value) => OnPropertyChanged(nameof(HasWarning));
+
+    partial void OnSelectedLayoutChanged(LayoutDefinition? value) => RefreshLayoutState();
 
     public async Task CreateProjectAsync(string directory, string name)
     {
@@ -138,6 +148,72 @@ public partial class MainViewModel : ViewModelBase
         ActiveTool = "Select";
         ResetSelection();
         NotifyDrawingChanged($"{PastTense(kind)} {count} {(count == 1 ? "entity" : "entities")}");
+    }
+
+    public void ReportCoordinateSubmission(bool success, bool completed, string message)
+    {
+        if (success) CoordinateInputText = string.Empty;
+        if (!completed) StatusText = message;
+    }
+
+    public bool TryExecuteTextCommand(string? input)
+    {
+        var command = input?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(command)) return false;
+        var tool = command switch
+        {
+            "select" or "sel" => "Select",
+            "line" or "l" => "Line",
+            "polyline" or "pl" => "Polyline",
+            "circle" or "c" => "Circle",
+            "rectangle" or "rect" or "rec" => "Rectangle",
+            "text" or "t" => "Text",
+            "dimension" or "dim" => "Dimension",
+            "move" or "m" => "Move",
+            "copy" or "co" => "Copy",
+            "rotate" or "ro" => "Rotate",
+            "scale" or "sc" => "Scale",
+            _ => null
+        };
+        if (tool is not null)
+        {
+            SelectTool(tool);
+            CoordinateInputText = string.Empty;
+            return true;
+        }
+
+        switch (command)
+        {
+            case "undo" or "u":
+                if (UndoCommand.CanExecute(null)) UndoCommand.Execute(null);
+                else StatusText = "Nothing to undo";
+                break;
+            case "redo":
+                if (RedoCommand.CanExecute(null)) RedoCommand.Execute(null);
+                else StatusText = "Nothing to redo";
+                break;
+            case "erase" or "delete" or "e":
+                if (EraseCommand.CanExecute(null)) EraseCommand.Execute(null);
+                else StatusText = "Select editable entities before erasing";
+                break;
+            case "grid":
+                ToggleGrid();
+                StatusText = GridStatus;
+                break;
+            case "snap":
+                ToggleSnap();
+                StatusText = SnapStatus;
+                break;
+            case "osnap":
+                ToggleObjectSnap();
+                StatusText = ObjectSnapStatus;
+                break;
+            default:
+                return false;
+        }
+
+        CoordinateInputText = string.Empty;
+        return true;
     }
 
     [RelayCommand]
@@ -226,6 +302,10 @@ public partial class MainViewModel : ViewModelBase
             Name = $"Layout {workspace.Project.Layouts.Count}",
             ActiveDrawingId = ActiveDrawing?.Id,
             ShowGrid = SelectedLayout?.ShowGrid ?? true,
+            SnapToGrid = SelectedLayout?.SnapToGrid ?? true,
+            SnapToObjects = SelectedLayout?.SnapToObjects ?? true,
+            ObjectSnaps = SelectedLayout?.ObjectSnaps ??
+                (ObjectSnapMode.Endpoint | ObjectSnapMode.Midpoint | ObjectSnapMode.Center | ObjectSnapMode.Intersection),
             GridSpacing = SelectedLayout?.GridSpacing ?? 25
         };
         workspace.Project.Layouts.Add(layout);
@@ -249,8 +329,7 @@ public partial class MainViewModel : ViewModelBase
     {
         if (SelectedLayout is null) return;
         SelectedLayout.ShowGrid = !SelectedLayout.ShowGrid;
-        SelectedLayout = SelectedLayout;
-        OnPropertyChanged(nameof(SelectedLayout));
+        RefreshLayoutState();
     }
 
     [RelayCommand]
@@ -258,7 +337,15 @@ public partial class MainViewModel : ViewModelBase
     {
         if (SelectedLayout is null) return;
         SelectedLayout.SnapToGrid = !SelectedLayout.SnapToGrid;
-        OnPropertyChanged(nameof(SelectedLayout));
+        RefreshLayoutState();
+    }
+
+    [RelayCommand]
+    private void ToggleObjectSnap()
+    {
+        if (SelectedLayout is null) return;
+        SelectedLayout.SnapToObjects = !SelectedLayout.SnapToObjects;
+        RefreshLayoutState();
     }
 
     [RelayCommand]
@@ -281,6 +368,29 @@ public partial class MainViewModel : ViewModelBase
         _selectedEntityIds.Clear();
         SelectedEntityCount = 0;
         EraseCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RefreshLayoutState()
+    {
+        ViewportRevision++;
+        OnPropertyChanged(nameof(GridStatus));
+        OnPropertyChanged(nameof(SnapStatus));
+        OnPropertyChanged(nameof(ObjectSnapStatus));
+        OnPropertyChanged(nameof(SnapEndpointEnabled));
+        OnPropertyChanged(nameof(SnapMidpointEnabled));
+        OnPropertyChanged(nameof(SnapCenterEnabled));
+        OnPropertyChanged(nameof(SnapIntersectionEnabled));
+        OnPropertyChanged(nameof(SelectedLayout));
+    }
+
+    private bool HasSnapMode(ObjectSnapMode mode) => SelectedLayout?.ObjectSnaps.HasFlag(mode) == true;
+
+    private void SetSnapMode(ObjectSnapMode mode, bool enabled)
+    {
+        if (SelectedLayout is null || HasSnapMode(mode) == enabled) return;
+        if (enabled) SelectedLayout.ObjectSnaps |= mode;
+        else SelectedLayout.ObjectSnaps &= ~mode;
+        RefreshLayoutState();
     }
 
     private static string PastTense(EntityTransformKind kind) => kind switch

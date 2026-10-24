@@ -58,6 +58,9 @@ public sealed class ProjectStoreTests : IDisposable
         layer.LineWeightMm = 0.7;
         layer.Opacity = 0.45;
         layer.Group = "Annotations";
+        var layout = Assert.Single(workspace.Project.Layouts);
+        layout.SnapToObjects = false;
+        layout.ObjectSnaps = ObjectSnapMode.Endpoint | ObjectSnapMode.Center;
         drawing.Entities.Add(new DrawingEntity { Kind = EntityKind.Line, LayerId = layer.Id, Points = [new(1, 2), new(3, 4)] });
         await _store.SaveAsync(workspace);
 
@@ -69,6 +72,9 @@ public sealed class ProjectStoreTests : IDisposable
         Assert.Equal(0.45, loadedLayer.Opacity);
         Assert.Equal("Annotations", loadedLayer.Group);
         Assert.Single(loadedDrawing.Entities);
+        var loadedLayout = Assert.Single(loaded.Project.Layouts);
+        Assert.False(loadedLayout.SnapToObjects);
+        Assert.Equal(ObjectSnapMode.Endpoint | ObjectSnapMode.Center, loadedLayout.ObjectSnaps);
     }
 
     [Fact]

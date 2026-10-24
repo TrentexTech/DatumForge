@@ -184,30 +184,52 @@
                         <TextBlock Text="LAYOUT" FontSize="9" Foreground="#6F828E" FontWeight="Bold" Margin="0,8,0,0" />
                         <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Grid spacing" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding SelectedLayout.GridSpacing, StringFormat='{}{0:0.##}'}" /></Grid>
                         <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Zoom" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding SelectedLayout.Zoom, StringFormat='{}{0:P0}'}" /></Grid>
+                        <TextBlock Text="OBJECT SNAPS" FontSize="9" Foreground="#6F828E" FontWeight="Bold" Margin="0,8,0,0" />
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+                            <CheckBox Content="Endpoint" IsChecked="{Binding SnapEndpointEnabled}" />
+                            <CheckBox Grid.Column="1" Content="Midpoint" IsChecked="{Binding SnapMidpointEnabled}" />
+                            <CheckBox Grid.Row="1" Content="Center" IsChecked="{Binding SnapCenterEnabled}" />
+                            <CheckBox Grid.Row="1" Grid.Column="1" Content="Intersection" IsChecked="{Binding SnapIntersectionEnabled}" />
+                        </Grid>
                     </StackPanel>
                 </Border>
             </Grid>
         </Grid>
 
-        <!-- Layout bar -->
-        <Border Grid.Row="5" Background="#11171C" BorderBrush="#2B353E" BorderThickness="0,1,0,0" Padding="10,5" IsVisible="{Binding IsWorkspaceVisible}">
-            <Grid ColumnDefinitions="Auto,*,Auto">
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                    <Button Content="＋" Command="{Binding AddLayoutCommand}" Padding="9,4" ToolTip.Tip="New layout" />
-                    <ListBox ItemsSource="{Binding Layouts}" SelectedItem="{Binding SelectedLayout}" Background="Transparent" BorderThickness="0">
-                        <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate></ListBox.ItemsPanel>
-                        <ListBox.Styles><Style Selector="ListBoxItem"><Setter Property="Padding" Value="13,5" /><Setter Property="CornerRadius" Value="4" /></Style><Style Selector="ListBoxItem:selected"><Setter Property="Background" Value="#276E59" /></Style></ListBox.Styles>
-                        <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ListBox.ItemTemplate>
-                    </ListBox>
-                </StackPanel>
-                <TextBlock Grid.Column="1" Text="{Binding StatusText}" Foreground="#81939E" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
-                    <Button Classes="tool" Content="Grid" Command="{Binding ToggleGridCommand}" />
-                    <Button Classes="tool" Content="Snap" Command="{Binding ToggleSnapCommand}" />
-                    <Border Width="1" Background="#334049" Margin="7,1" />
-                    <TextBlock Text="{Binding SelectedLayout.Zoom, StringFormat='{}{0:P0}'}" Width="48" TextAlignment="Center" VerticalAlignment="Center" />
-                </StackPanel>
-            </Grid>
-        </Border>
+        <!-- Command line and layout bar -->
+        <Grid Grid.Row="5" RowDefinitions="Auto,Auto" IsVisible="{Binding IsWorkspaceVisible}">
+            <Border Background="#0D1216" BorderBrush="#2B353E" BorderThickness="0,1,0,0" Padding="10,5">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <TextBlock Text="COMMAND" FontSize="9" FontWeight="Bold" Foreground="#67D6AD" VerticalAlignment="Center" />
+                    <TextBox x:Name="CoordinateInput"
+                             Grid.Column="1"
+                             Text="{Binding CoordinateInputText}"
+                             PlaceholderText="Coordinate: 100,50 · @25,-10 · @50&lt;30"
+                             KeyDown="CoordinateInput_OnKeyDown"
+                             Padding="8,4" />
+                    <Button Grid.Column="2" Content="Enter" Click="CoordinateSubmit_OnClick" Padding="12,4" />
+                </Grid>
+            </Border>
+            <Border Grid.Row="1" Background="#11171C" BorderBrush="#2B353E" BorderThickness="0,1,0,0" Padding="10,5">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <Button Content="＋" Command="{Binding AddLayoutCommand}" Padding="9,4" ToolTip.Tip="New layout" />
+                        <ListBox ItemsSource="{Binding Layouts}" SelectedItem="{Binding SelectedLayout}" Background="Transparent" BorderThickness="0">
+                            <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                            <ListBox.Styles><Style Selector="ListBoxItem"><Setter Property="Padding" Value="13,5" /><Setter Property="CornerRadius" Value="4" /></Style><Style Selector="ListBoxItem:selected"><Setter Property="Background" Value="#276E59" /></Style></ListBox.Styles>
+                            <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding StatusText}" Foreground="#81939E" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                        <Button Classes="tool" Content="{Binding GridStatus}" Command="{Binding ToggleGridCommand}" />
+                        <Button Classes="tool" Content="{Binding SnapStatus}" Command="{Binding ToggleSnapCommand}" />
+                        <Button Classes="tool" Content="{Binding ObjectSnapStatus}" Command="{Binding ToggleObjectSnapCommand}" />
+                        <Border Width="1" Background="#334049" Margin="7,1" />
+                        <TextBlock Text="{Binding SelectedLayout.Zoom, StringFormat='{}{0:P0}'}" Width="48" TextAlignment="Center" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

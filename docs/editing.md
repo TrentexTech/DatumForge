@@ -12,7 +12,7 @@ DatumForge keeps viewport interaction separate from drawing mutations. The viewp
 
 ## Modify tools
 
-Select entities before choosing a modify tool. Grid snapping applies to both input points when enabled.
+Select entities before choosing a modify tool. Object snapping is evaluated before grid snapping for pointer input.
 
 - **Move**: choose a base point and then its target point.
 - **Copy**: choose a base point and then the target for the copied entities. Copies retain geometry and layer ownership but receive new entity IDs.
@@ -21,6 +21,24 @@ Select entities before choosing a modify tool. Grid snapping applies to both inp
 - **Erase**: click the toolbar action or press **Delete** or **Backspace**.
 
 Degenerate operations, such as a zero-distance move or a rotation reference at the pivot, do not create journal entries.
+
+## Command and coordinate entry
+
+The narrow command bar below the viewport accepts tool names and precise points. Press **Enter** or click the arrow button to submit an entry.
+
+- Absolute Cartesian point: `100,50`
+- Relative Cartesian point: `@25,-10`
+- Relative polar point: `@50<30` (distance 50 at 30 degrees)
+
+Relative points use the active tool's first point as their origin. Typed coordinates are exact and therefore do not pass through grid or object snapping.
+
+Commands include `select` (`sel`), `line` (`l`), `polyline` (`pl`), `circle` (`c`), `rectangle` (`rect`), `text` (`t`), `dimension` (`dim`), `move` (`m`), `copy` (`co`), `rotate` (`ro`), `scale` (`sc`), `erase` (`e`), `undo` (`u`), `redo`, `grid`, `snap`, and `osnap`.
+
+## Object snaps
+
+Object snapping is stored per layout and can be toggled independently from the grid. The property panel enables endpoint, midpoint, center, and line-segment intersection modes separately. Hidden-layer geometry is ignored.
+
+Snap markers identify the candidate before or during point input: square for endpoint, diamond for midpoint, circle for center, and cross for intersection. When both systems are enabled, a nearby object snap wins; otherwise the point falls back to the layout grid.
 
 ## Undo and redo
 
