@@ -28,6 +28,7 @@ public sealed class DrawingViewport : Control
     private CadPoint? _anchor;
     private CadPoint? _previewPoint;
     private ObjectSnapResult? _snapResult;
+    private Guid? _hoveredEntityId;
     private readonly HashSet<Guid> _selectedEntityIds = [];
     private Point? _lastPointerPosition;
     private Point? _lastPanPosition;
@@ -36,10 +37,10 @@ public sealed class DrawingViewport : Control
     static DrawingViewport()
     {
         AffectsRender<DrawingViewport>(DrawingProperty, LayoutProperty, ActiveToolProperty, RevisionTokenProperty);
-        DrawingProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.ClearSelection());
+        DrawingProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.RefreshDrawing());
         LayoutProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.RefreshPointerFeedback());
         RevisionTokenProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.RefreshFromModel());
-        ActiveToolProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.ResetInteraction());
+        ActiveToolProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.ChangeActiveTool());
     }
 
     public DrawingDocument? Drawing { get => GetValue(DrawingProperty); set => SetValue(DrawingProperty, value); }
@@ -59,7 +60,12 @@ public sealed class DrawingViewport : Control
         {
             var layer = Drawing.Layers.FirstOrDefault(item => item.Id == entity.LayerId);
             if (layer is null || !layer.IsVisible) continue;
-            DrawEntity(context, entity, layer, _selectedEntityIds.Contains(entity.Id));
+            DrawEntity(
+                context,
+                entity,
+                layer,
+                _selectedEntityIds.Contains(entity.Id),
+                _hoveredEntityId == entity.Id);
         }
 
         if (_anchor is { } previewAnchor && _previewPoint is { } previewPoint)
@@ -92,9 +98,11 @@ public sealed class DrawingViewport : Control
         {
             _previewPoint = null;
             _snapResult = null;
+            _hoveredEntityId = null;
             _lastPanPosition = e.GetPosition(this);
             _panChangeReported = false;
             Cursor = PanningCursor;
+            InvalidateVisual();
             e.Pointer.Capture(this);
             e.Handled = true;
             return;
@@ -133,15 +141,19 @@ public sealed class DrawingViewport : Control
             return;
         }
 
-        if (Drawing is null || ActiveTool == "Select")
+        if (Drawing is null)
         {
-            if (_snapResult is null && _previewPoint is null) return;
-            _snapResult = null;
-            _previewPoint = null;
-            InvalidateVisual();
+            ClearPointerFeedback();
             return;
         }
 
+        if (ActiveTool == "Select")
+        {
+            UpdateSelectionPreview(ToWorld(_lastPointerPosition.Value));
+            return;
+        }
+
+        _hoveredEntityId = null;
         var pointer = ToWorld(_lastPointerPosition.Value);
         _previewPoint = ResolvePointerPoint(pointer);
         InvalidateVisual();
@@ -151,10 +163,7 @@ public sealed class DrawingViewport : Control
     {
         base.OnPointerExited(e);
         _lastPointerPosition = null;
-        if (_previewPoint is null && _snapResult is null) return;
-        _previewPoint = null;
-        _snapResult = null;
-        InvalidateVisual();
+        ClearPointerFeedback();
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
@@ -180,6 +189,7 @@ public sealed class DrawingViewport : Control
         _lastPanPosition = null;
         _panChangeReported = false;
         Cursor = null;
+        RefreshPointerFeedback();
         return changed;
     }
 
@@ -204,6 +214,7 @@ public sealed class DrawingViewport : Control
             ? ResolvePointerPoint(ToWorld(pointer))
             : null;
         if (_previewPoint is null) _snapResult = null;
+        if (ActiveTool == "Select" && Drawing is not null) UpdateSelectionPreview(ToWorld(pointer));
         InvalidateVisual();
         ViewChanged?.Invoke(this, EventArgs.Empty);
         e.Handled = true;
@@ -216,6 +227,7 @@ public sealed class DrawingViewport : Control
         {
             ResetInteraction();
             ClearSelection();
+            RefreshPointerFeedback();
             e.Handled = true;
         }
     }
@@ -245,7 +257,20 @@ public sealed class DrawingViewport : Control
         _anchor = null;
         _previewPoint = null;
         _snapResult = null;
+        _hoveredEntityId = null;
         InvalidateVisual();
+    }
+
+    private void ChangeActiveTool()
+    {
+        ResetInteraction();
+        RefreshPointerFeedback();
+    }
+
+    private void RefreshDrawing()
+    {
+        ClearSelection();
+        RefreshPointerFeedback();
     }
 
     private void RefreshFromModel()
@@ -256,14 +281,41 @@ public sealed class DrawingViewport : Control
 
     private void RefreshPointerFeedback()
     {
-        if (_lastPointerPosition is { } pointer && Drawing is not null && ActiveTool != "Select")
-            _previewPoint = ResolvePointerPoint(ToWorld(pointer));
-        else
+        if (_lastPointerPosition is { } pointer && Drawing is not null)
         {
-            _previewPoint = null;
-            _snapResult = null;
+            if (ActiveTool == "Select")
+            {
+                _previewPoint = null;
+                _snapResult = null;
+                UpdateSelectionPreview(ToWorld(pointer));
+                return;
+            }
+
+            _hoveredEntityId = null;
+            _previewPoint = ResolvePointerPoint(ToWorld(pointer));
+            InvalidateVisual();
+            return;
         }
 
+        ClearPointerFeedback();
+    }
+
+    private void UpdateSelectionPreview(CadPoint point)
+    {
+        var hoveredEntityId = Drawing is null
+            ? null
+            : EntityHitTester.HitTest(Drawing, point, 8 / Math.Max(0.001, Layout?.Zoom ?? 1))?.Id;
+        if (_hoveredEntityId == hoveredEntityId) return;
+        _hoveredEntityId = hoveredEntityId;
+        InvalidateVisual();
+    }
+
+    private void ClearPointerFeedback()
+    {
+        if (_previewPoint is null && _snapResult is null && _hoveredEntityId is null) return;
+        _previewPoint = null;
+        _snapResult = null;
+        _hoveredEntityId = null;
         InvalidateVisual();
     }
 
@@ -479,7 +531,12 @@ public sealed class DrawingViewport : Control
         for (var y = origin.Y % spacing; y < Bounds.Height; y += spacing) context.DrawLine(pen, new Point(0, y), new Point(Bounds.Width, y));
     }
 
-    private void DrawEntity(DrawingContext context, DrawingEntity entity, DrawingLayer layer, bool isSelected)
+    private void DrawEntity(
+        DrawingContext context,
+        DrawingEntity entity,
+        DrawingLayer layer,
+        bool isSelected,
+        bool isHovered)
     {
         var brush = ParseBrush(layer.Color, "#E8EDF2");
         brush.Opacity = Math.Clamp(layer.Opacity, 0, 1);
@@ -494,7 +551,9 @@ public sealed class DrawingViewport : Control
         };
         var pen = isSelected
             ? new Pen(new SolidColorBrush(Color.Parse("#65D6FF")), thickness + 2)
-            : new Pen(brush, thickness, dashStyle: dash);
+            : isHovered
+                ? new Pen(new SolidColorBrush(Color.Parse("#67D6AD")), thickness + 2)
+                : new Pen(brush, thickness, dashStyle: dash);
         if (entity.Points.Count == 0) return;
         var first = ToScreen(entity.Points[0]);
         var second = entity.Points.Count > 1 ? ToScreen(entity.Points[1]) : first;

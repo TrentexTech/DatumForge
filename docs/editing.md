@@ -12,6 +12,7 @@ DatumForge keeps viewport interaction separate from drawing mutations. The viewp
 ## Selection
 
 - Click an entity with **Select** to replace the current selection.
+- Hovering in **Select** previews the topmost entity that the next click would select with a green highlight.
 - Hold **Ctrl** or **Shift** while clicking to toggle entities in the selection set.
 - Selected entities use a cyan highlight with white endpoint grips.
 - Hidden-layer entities are not selectable. Locked-layer entities may be selected for inspection but are excluded from editing operations.
