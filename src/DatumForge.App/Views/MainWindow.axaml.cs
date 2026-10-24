@@ -24,6 +24,14 @@ public partial class MainWindow : Window
     private void Viewport_OnTransformRequested(object? sender, EntityTransformRequestedEventArgs e) =>
         ViewModel.ApplyTransform(e.Kind, e.EntityIds, e.Reference, e.Target);
 
+    private void Minimize_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        WindowState = WindowState.Minimized;
+
+    private void MaximizeRestore_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    private void Close_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Close();
+
     private void CoordinateInput_OnKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter) return;

@@ -23,6 +23,36 @@
         <Style Selector="Button.tool:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="#25313B" />
         </Style>
+        <Style Selector="Button.title-action">
+            <Setter Property="Width" Value="34" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="7" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="#C9D4DB" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <Style Selector="Button.title-action:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#2A353E" />
+        </Style>
+        <Style Selector="Button.title-action:disabled">
+            <Setter Property="Opacity" Value="0.35" />
+        </Style>
+        <Style Selector="Button.caption">
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Height" Value="35" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="#D7E0E5" />
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
+        <Style Selector="Button.caption:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#313D46" />
+        </Style>
+        <Style Selector="Button.caption.close:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#C42B1C" />
+        </Style>
         <Style Selector="Button.primary">
             <Setter Property="Background" Value="#27A879" />
             <Setter Property="Foreground" Value="White" />
