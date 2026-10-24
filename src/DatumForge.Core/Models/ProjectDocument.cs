@@ -9,7 +9,9 @@ public enum ObjectSnapMode
     Endpoint = 1,
     Midpoint = 2,
     Center = 4,
-    Intersection = 8
+    Intersection = 8,
+    Quadrant = 16,
+    Nearest = 32
 }
 
 public sealed class ProjectDocument
@@ -54,7 +56,8 @@ public sealed class LayoutDefinition
     public bool PolarTracking { get; set; }
     public double PolarIncrementDegrees { get; set; } = 45;
     public ObjectSnapMode ObjectSnaps { get; set; } =
-        ObjectSnapMode.Endpoint | ObjectSnapMode.Midpoint | ObjectSnapMode.Center | ObjectSnapMode.Intersection;
+        ObjectSnapMode.Endpoint | ObjectSnapMode.Midpoint | ObjectSnapMode.Center |
+        ObjectSnapMode.Intersection | ObjectSnapMode.Quadrant;
     public bool ShowLineWeights { get; set; } = true;
     public double GridSpacing { get; set; } = 25;
     [JsonIgnore]

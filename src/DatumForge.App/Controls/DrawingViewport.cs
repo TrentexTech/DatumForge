@@ -458,6 +458,14 @@ public sealed class DrawingViewport : Control
                 context.DrawLine(pen, new Point(point.X - size, point.Y - size), new Point(point.X + size, point.Y + size));
                 context.DrawLine(pen, new Point(point.X - size, point.Y + size), new Point(point.X + size, point.Y - size));
                 break;
+            case ObjectSnapKind.Quadrant:
+                context.DrawLine(pen, new Point(point.X - size, point.Y), new Point(point.X + size, point.Y));
+                context.DrawLine(pen, new Point(point.X, point.Y - size), new Point(point.X, point.Y + size));
+                break;
+            case ObjectSnapKind.Nearest:
+                context.DrawLine(pen, new Point(point.X - size, point.Y - 2), new Point(point.X + size, point.Y - 2));
+                context.DrawLine(pen, new Point(point.X - size, point.Y + 2), new Point(point.X + size, point.Y + 2));
+                break;
         }
     }
 

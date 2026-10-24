@@ -54,9 +54,9 @@ Press **F10**, use the **Polar** view control, or enter `polar` to constrain poi
 
 ## Object snaps
 
-Object snapping is stored per layout and can be toggled independently from the grid. The property panel enables endpoint, midpoint, center, and line-segment intersection modes separately. Hidden-layer geometry is ignored.
+Object snapping is stored per layout and can be toggled independently from the grid. The property panel enables endpoint, midpoint, center, line-segment intersection, circle quadrant, and nearest-point modes separately. Hidden-layer geometry is ignored. Nearest-point snapping is opt-in because it can capture any nearby visible edge, and it acts as a fallback whenever a specialized snap is also within range.
 
-Snap markers identify the candidate before or during point input: square for endpoint, diamond for midpoint, circle for center, and cross for intersection. When both systems are enabled, a nearby object snap wins; otherwise the point falls back to the layout grid.
+Snap markers identify the candidate before or during point input: square for endpoint, diamond for midpoint, circle for center, diagonal cross for intersection, orthogonal cross for quadrant, and parallel lines for nearest. When both systems are enabled, a nearby object snap wins; otherwise the point falls back to the layout grid.
 
 ## Undo and redo
 

@@ -62,7 +62,7 @@ public sealed class ProjectStoreTests : IDisposable
         layout.SnapToObjects = false;
         layout.PolarTracking = true;
         layout.PolarIncrementDegrees = 30;
-        layout.ObjectSnaps = ObjectSnapMode.Endpoint | ObjectSnapMode.Center;
+        layout.ObjectSnaps = ObjectSnapMode.Endpoint | ObjectSnapMode.Quadrant | ObjectSnapMode.Nearest;
         layout.ViewportModules =
         [
             new() { Kind = ViewportModuleKind.Viewer, Size = 720 },
@@ -83,7 +83,9 @@ public sealed class ProjectStoreTests : IDisposable
         Assert.False(loadedLayout.SnapToObjects);
         Assert.True(loadedLayout.PolarTracking);
         Assert.Equal(30, loadedLayout.PolarIncrementDegrees);
-        Assert.Equal(ObjectSnapMode.Endpoint | ObjectSnapMode.Center, loadedLayout.ObjectSnaps);
+        Assert.Equal(
+            ObjectSnapMode.Endpoint | ObjectSnapMode.Quadrant | ObjectSnapMode.Nearest,
+            loadedLayout.ObjectSnaps);
         Assert.Equal([ViewportModuleKind.Viewer, ViewportModuleKind.Layers], loadedLayout.ViewportModules.Select(module => module.Kind));
         Assert.Equal(310, loadedLayout.ViewportModules[1].Size);
     }

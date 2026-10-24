@@ -189,6 +189,25 @@ public sealed class MainViewModelTests : IDisposable
         Assert.True(viewModel.HasUnsavedWork);
     }
 
+    [Fact]
+    public async Task AdditionalObjectSnapsAreLayoutSpecificAndEditable()
+    {
+        var store = new ProjectStore();
+        var workspace = await store.CreateAsync(Path.Combine(_directory, "additional-snaps"), "Snaps");
+        var viewModel = new MainViewModel(store, new UserSettingsStore(Path.Combine(_directory, "settings")));
+        await viewModel.OpenProjectAsync(workspace.ProjectFilePath);
+
+        Assert.True(viewModel.SnapQuadrantEnabled);
+        Assert.False(viewModel.SnapNearestEnabled);
+
+        viewModel.SnapQuadrantEnabled = false;
+        viewModel.SnapNearestEnabled = true;
+
+        Assert.False(viewModel.SelectedLayout!.ObjectSnaps.HasFlag(ObjectSnapMode.Quadrant));
+        Assert.True(viewModel.SelectedLayout.ObjectSnaps.HasFlag(ObjectSnapMode.Nearest));
+        Assert.True(viewModel.HasUnsavedWork);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);

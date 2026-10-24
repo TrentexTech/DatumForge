@@ -77,6 +77,63 @@ public sealed class ObjectSnapperTests
     }
 
     [Fact]
+    public void FindsCircleQuadrants()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        drawing.Entities.Add(new DrawingEntity
+        {
+            Kind = EntityKind.Circle,
+            LayerId = layer.Id,
+            Points = [new(10, 20)],
+            Radius = 5
+        });
+
+        var result = ObjectSnapper.FindNearest(drawing, new(10.2, 25.4), 1, ObjectSnapMode.Quadrant);
+
+        Assert.Equal(ObjectSnapKind.Quadrant, result?.Kind);
+        Assert.Equal(new CadPoint(10, 25), result?.Point);
+    }
+
+    [Fact]
+    public void FindsNearestPointOnSegmentsAndCircles()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        drawing.Entities.Add(Line(layer.Id, new(0, 0), new(10, 0)));
+        drawing.Entities.Add(new DrawingEntity
+        {
+            Kind = EntityKind.Circle,
+            LayerId = layer.Id,
+            Points = [new(20, 20)],
+            Radius = 5
+        });
+
+        var lineResult = ObjectSnapper.FindNearest(drawing, new(3, 0.7), 1, ObjectSnapMode.Nearest);
+        var circleResult = ObjectSnapper.FindNearest(drawing, new(26, 28), 6, ObjectSnapMode.Nearest);
+
+        Assert.Equal(ObjectSnapKind.Nearest, lineResult?.Kind);
+        Assert.Equal(new CadPoint(3, 0), lineResult?.Point);
+        Assert.Equal(ObjectSnapKind.Nearest, circleResult?.Kind);
+        Assert.Equal(23, circleResult!.Point.X, 10);
+        Assert.Equal(24, circleResult.Point.Y, 10);
+    }
+
+    [Fact]
+    public void SpecializedSnapTakesPriorityOverNearestPoint()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        drawing.Entities.Add(Line(layer.Id, new(0, 0), new(10, 0)));
+
+        var result = ObjectSnapper.FindNearest(
+            drawing,
+            new CadPoint(0.4, 0.1),
+            1,
+            ObjectSnapMode.Endpoint | ObjectSnapMode.Nearest);
+
+        Assert.Equal(ObjectSnapKind.Endpoint, result?.Kind);
+        Assert.Equal(new CadPoint(0, 0), result?.Point);
+    }
+
+    [Fact]
     public void FindsIntersectionOfVisibleSegments()
     {
         var drawing = DrawingWithLayer(out var layer);

@@ -82,11 +82,13 @@
                     <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Grid spacing" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding Owner.SelectedLayout.GridSpacing, StringFormat='{}{0:0.##}'}" /></Grid>
                     <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Zoom" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding Owner.ZoomStatus}" /></Grid>
                     <TextBlock Text="OBJECT SNAPS" FontSize="9" Foreground="#6F828E" FontWeight="Bold" Margin="0,8,0,0" />
-                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto">
                         <CheckBox Content="Endpoint" IsChecked="{Binding Owner.SnapEndpointEnabled}" />
                         <CheckBox Grid.Column="1" Content="Midpoint" IsChecked="{Binding Owner.SnapMidpointEnabled}" />
                         <CheckBox Grid.Row="1" Content="Center" IsChecked="{Binding Owner.SnapCenterEnabled}" />
                         <CheckBox Grid.Row="1" Grid.Column="1" Content="Intersection" IsChecked="{Binding Owner.SnapIntersectionEnabled}" />
+                        <CheckBox Grid.Row="2" Content="Quadrant" IsChecked="{Binding Owner.SnapQuadrantEnabled}" />
+                        <CheckBox Grid.Row="2" Grid.Column="1" Content="Nearest" IsChecked="{Binding Owner.SnapNearestEnabled}" />
                     </Grid>
                 </StackPanel>
             </ScrollViewer>

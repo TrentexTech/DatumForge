@@ -2,7 +2,7 @@ using DatumForge.Core.Models;
 
 namespace DatumForge.Core.Editing;
 
-public enum ObjectSnapKind { Endpoint, Midpoint, Center, Intersection }
+public enum ObjectSnapKind { Endpoint, Midpoint, Center, Intersection, Quadrant, Nearest }
 
 public sealed record ObjectSnapResult(CadPoint Point, ObjectSnapKind Kind, Guid? EntityId, double Distance);
 
@@ -22,7 +22,7 @@ public static class ObjectSnapper
             .Select(layer => layer.Id)
             .ToHashSet();
         var entities = drawing.Entities.Where(entity => visibleLayerIds.Contains(entity.LayerId)).ToArray();
-        var candidates = entities.SelectMany(entity => EntityCandidates(entity, modes)).ToList();
+        var candidates = entities.SelectMany(entity => EntityCandidates(entity, modes, pointer)).ToList();
 
         if (modes.HasFlag(ObjectSnapMode.Intersection))
         {
@@ -37,12 +37,16 @@ public static class ObjectSnapper
         return candidates
             .Select(candidate => candidate with { Distance = Distance(candidate.Point, pointer) })
             .Where(candidate => candidate.Distance <= tolerance)
-            .OrderBy(candidate => candidate.Distance)
+            .OrderBy(candidate => candidate.Kind == ObjectSnapKind.Nearest)
+            .ThenBy(candidate => candidate.Distance)
             .ThenBy(candidate => candidate.Kind)
             .FirstOrDefault();
     }
 
-    private static IEnumerable<ObjectSnapResult> EntityCandidates(DrawingEntity entity, ObjectSnapMode modes)
+    private static IEnumerable<ObjectSnapResult> EntityCandidates(
+        DrawingEntity entity,
+        ObjectSnapMode modes,
+        CadPoint pointer)
     {
         if (modes.HasFlag(ObjectSnapMode.Endpoint))
         {
@@ -63,6 +67,44 @@ public static class ObjectSnapper
             else if (entity.Kind == EntityKind.Rectangle && entity.Points.Count > 1)
                 yield return new ObjectSnapResult(Midpoint(entity.Points[0], entity.Points[1]), ObjectSnapKind.Center, entity.Id, 0);
         }
+
+        if (modes.HasFlag(ObjectSnapMode.Quadrant) &&
+            entity.Kind == EntityKind.Circle &&
+            entity.Points.Count > 0)
+        {
+            var center = entity.Points[0];
+            var radius = Math.Abs(entity.Radius);
+            yield return new ObjectSnapResult(new CadPoint(center.X + radius, center.Y), ObjectSnapKind.Quadrant, entity.Id, 0);
+            yield return new ObjectSnapResult(new CadPoint(center.X, center.Y + radius), ObjectSnapKind.Quadrant, entity.Id, 0);
+            yield return new ObjectSnapResult(new CadPoint(center.X - radius, center.Y), ObjectSnapKind.Quadrant, entity.Id, 0);
+            yield return new ObjectSnapResult(new CadPoint(center.X, center.Y - radius), ObjectSnapKind.Quadrant, entity.Id, 0);
+        }
+
+        if (modes.HasFlag(ObjectSnapMode.Nearest) && NearestPoint(entity, pointer) is { } nearest)
+            yield return new ObjectSnapResult(nearest, ObjectSnapKind.Nearest, entity.Id, 0);
+    }
+
+    private static CadPoint? NearestPoint(DrawingEntity entity, CadPoint pointer)
+    {
+        if (entity.Kind == EntityKind.Circle && entity.Points.Count > 0)
+        {
+            var center = entity.Points[0];
+            var radius = Math.Abs(entity.Radius);
+            var dx = pointer.X - center.X;
+            var dy = pointer.Y - center.Y;
+            var distance = Math.Sqrt(dx * dx + dy * dy);
+            return distance < 1e-9
+                ? new CadPoint(center.X + radius, center.Y)
+                : new CadPoint(center.X + dx / distance * radius, center.Y + dy / distance * radius);
+        }
+
+        var nearestSegmentPoint = Segments(entity)
+            .Select(segment => ClosestPoint(segment.Start, segment.End, pointer))
+            .OrderBy(point => Distance(point, pointer))
+            .Select(point => (CadPoint?)point)
+            .FirstOrDefault();
+        if (nearestSegmentPoint is not null) return nearestSegmentPoint;
+        return entity.Points.Count > 0 ? entity.Points[0] : null;
     }
 
     private static IEnumerable<CadPoint> Endpoints(DrawingEntity entity)
@@ -125,6 +167,17 @@ public static class ObjectSnapper
 
     private static CadPoint Midpoint(CadPoint first, CadPoint second) =>
         new((first.X + second.X) / 2, (first.Y + second.Y) / 2);
+
+    private static CadPoint ClosestPoint(CadPoint start, CadPoint end, CadPoint pointer)
+    {
+        var dx = end.X - start.X;
+        var dy = end.Y - start.Y;
+        var lengthSquared = dx * dx + dy * dy;
+        if (lengthSquared < 1e-18) return start;
+        var position = ((pointer.X - start.X) * dx + (pointer.Y - start.Y) * dy) / lengthSquared;
+        position = Math.Clamp(position, 0, 1);
+        return new CadPoint(start.X + position * dx, start.Y + position * dy);
+    }
 
     private static double Distance(CadPoint first, CadPoint second) =>
         Math.Sqrt(Math.Pow(first.X - second.X, 2) + Math.Pow(first.Y - second.Y, 2));

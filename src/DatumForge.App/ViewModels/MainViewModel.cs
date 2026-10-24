@@ -102,6 +102,8 @@ public partial class MainViewModel : ViewModelBase
     public bool SnapMidpointEnabled { get => HasSnapMode(ObjectSnapMode.Midpoint); set => SetSnapMode(ObjectSnapMode.Midpoint, value); }
     public bool SnapCenterEnabled { get => HasSnapMode(ObjectSnapMode.Center); set => SetSnapMode(ObjectSnapMode.Center, value); }
     public bool SnapIntersectionEnabled { get => HasSnapMode(ObjectSnapMode.Intersection); set => SetSnapMode(ObjectSnapMode.Intersection, value); }
+    public bool SnapQuadrantEnabled { get => HasSnapMode(ObjectSnapMode.Quadrant); set => SetSnapMode(ObjectSnapMode.Quadrant, value); }
+    public bool SnapNearestEnabled { get => HasSnapMode(ObjectSnapMode.Nearest); set => SetSnapMode(ObjectSnapMode.Nearest, value); }
 
     partial void OnSelectedProjectTabChanged(ProjectTabViewModel? value)
     {
@@ -519,7 +521,8 @@ public partial class MainViewModel : ViewModelBase
             SnapToGrid = SelectedLayout?.SnapToGrid ?? true,
             SnapToObjects = SelectedLayout?.SnapToObjects ?? true,
             ObjectSnaps = SelectedLayout?.ObjectSnaps ??
-                (ObjectSnapMode.Endpoint | ObjectSnapMode.Midpoint | ObjectSnapMode.Center | ObjectSnapMode.Intersection),
+                (ObjectSnapMode.Endpoint | ObjectSnapMode.Midpoint | ObjectSnapMode.Center |
+                 ObjectSnapMode.Intersection | ObjectSnapMode.Quadrant),
             GridSpacing = SelectedLayout?.GridSpacing ?? 25,
             ViewportModules = SelectedLayout?.ViewportModules
                 .Select(module => new ViewportModuleDefinition { Kind = module.Kind, Size = module.Size })
@@ -676,6 +679,8 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(SnapMidpointEnabled));
         OnPropertyChanged(nameof(SnapCenterEnabled));
         OnPropertyChanged(nameof(SnapIntersectionEnabled));
+        OnPropertyChanged(nameof(SnapQuadrantEnabled));
+        OnPropertyChanged(nameof(SnapNearestEnabled));
         OnPropertyChanged(nameof(ZoomStatus));
         OnPropertyChanged(nameof(SelectedLayout));
     }
