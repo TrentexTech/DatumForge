@@ -1,0 +1,17 @@
+DATUMFORGE FOR WINDOWS
+======================
+
+1. Extract this ZIP to a folder.
+2. Double-click {{EXECUTABLE}} to start DatumForge.
+
+This is a self-contained Windows x64 build. It does not require a separate
+.NET installation.
+
+This early build is not digitally signed. Windows SmartScreen may therefore
+show an "unrecognized app" warning. Confirm that the filename and build commit
+below match the GitHub Actions artifact you downloaded before choosing to run it.
+
+Build commit: {{COMMIT}}
+Source: https://github.com/TrentexTech/DatumForge
+
+DatumForge is licensed under the MIT License. See LICENSE.txt.

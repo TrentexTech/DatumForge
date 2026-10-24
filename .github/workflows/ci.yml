@@ -39,12 +39,55 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+      - name: Derive traceable package names
+        id: package
+        shell: pwsh
+        run: |
+          $shortSha = "${{ github.sha }}".Substring(0, 7)
+          "short_sha=$shortSha" >> $env:GITHUB_OUTPUT
+          "artifact_name=DatumForge-win-x64-$shortSha-unsigned" >> $env:GITHUB_OUTPUT
+          "executable_name=DatumForge-$shortSha-win-x64.exe" >> $env:GITHUB_OUTPUT
       - name: Restore Windows runtime assets
         run: dotnet restore src/DatumForge.App/DatumForge.App.csproj -r win-x64
-      - name: Publish unsigned portable build
-        run: dotnet publish src/DatumForge.App/DatumForge.App.csproj -c Release -r win-x64 --self-contained false --no-restore -o artifacts/win-x64
+      - name: Publish self-contained single-file build
+        run: >-
+          dotnet publish src/DatumForge.App/DatumForge.App.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          --no-restore
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugSymbols=false
+          -p:DebugType=None
+          -o artifacts/publish
+      - name: Assemble minimal user package
+        shell: pwsh
+        run: |
+          $packageDirectory = "artifacts/package"
+          $executableName = "${{ steps.package.outputs.executable_name }}"
+          New-Item -ItemType Directory -Path $packageDirectory -Force | Out-Null
+          Move-Item -LiteralPath "artifacts/publish/DatumForge.App.exe" -Destination "$packageDirectory/$executableName"
+          Copy-Item -LiteralPath "LICENSE" -Destination "$packageDirectory/LICENSE.txt"
+          $startHere = Get-Content -LiteralPath "packaging/windows/START-HERE.txt" -Raw
+          $startHere = $startHere.Replace("{{COMMIT}}", "${{ steps.package.outputs.short_sha }}")
+          $startHere = $startHere.Replace("{{EXECUTABLE}}", $executableName)
+          Set-Content -LiteralPath "$packageDirectory/START-HERE.txt" -Value $startHere -Encoding utf8NoBOM
+      - name: Verify minimal package
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem -LiteralPath "artifacts/package" -File)
+          if ($files.Count -ne 3) {
+            throw "Expected exactly 3 packaged files, found $($files.Count): $($files.Name -join ', ')"
+          }
+          $executable = "artifacts/package/${{ steps.package.outputs.executable_name }}"
+          if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) {
+            throw "Expected executable not found: $executable"
+          }
       - uses: actions/upload-artifact@v7
         with:
-          name: DatumForge-win-x64-unsigned
-          path: artifacts/win-x64
+          name: ${{ steps.package.outputs.artifact_name }}
+          path: artifacts/package
           if-no-files-found: error
+          compression-level: 0

@@ -23,6 +23,12 @@ Select an entity by clicking it with the Select tool. Hold Ctrl or Shift to togg
 
 See [docs/editing.md](docs/editing.md) for transform input and journal behavior.
 
+## Windows builds
+
+Every successful `main` CI run publishes an unsigned, self-contained Windows x64 artifact. The artifact and executable names include the seven-character source commit, for example `DatumForge-win-x64-acc9c42-unsigned` and `DatumForge-acc9c42-win-x64.exe`.
+
+The downloaded ZIP contains only the executable, `START-HERE.txt`, and `LICENSE.txt`. No separate .NET installation is required.
+
 ## Run locally
 
 Requirements: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
