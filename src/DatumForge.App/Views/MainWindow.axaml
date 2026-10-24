@@ -104,41 +104,120 @@
         </Border>
 
         <Grid Grid.Row="1" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
-        <!-- Application ribbon -->
-        <Border Grid.Row="0" Background="#11171C" BorderBrush="#2A333B" BorderThickness="0,0,0,1" Padding="12,8">
-            <Grid RowDefinitions="Auto,Auto">
-                <Grid ColumnDefinitions="Auto,*">
-                    <StackPanel Orientation="Horizontal" Spacing="3">
-                        <Button Classes="tool" Content="＋ New" Click="NewProject_OnClick" />
-                        <Button Classes="tool" Content="⌁ Open project" Click="OpenProject_OnClick" />
-                        <Button Classes="tool" Content="Open drawing" Click="OpenDrawing_OnClick" />
+        <!-- Excel-inspired application ribbon -->
+        <Border Grid.Row="0" Background="#11171C" BorderBrush="#2A333B" BorderThickness="0,0,0,1">
+            <Grid RowDefinitions="31,86">
+                <Border BorderBrush="#2A333B" BorderThickness="0,0,0,1">
+                    <StackPanel Orientation="Horizontal" Margin="10,0,0,0">
+                        <Border BorderBrush="#27A879" BorderThickness="0,0,0,2" Padding="14,0">
+                            <TextBlock Text="HOME"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Foreground="#F1F6F8"
+                                       VerticalAlignment="Center" />
+                        </Border>
                     </StackPanel>
-                </Grid>
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="7" Margin="0,7,0,0">
-                    <TextBlock Text="DRAW" FontSize="9" FontWeight="Bold" Foreground="#71838F" VerticalAlignment="Center" />
-                    <ItemsControl ItemsSource="{Binding DrawingTools}">
-                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Classes="tool" Content="{Binding .}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectToolCommand}" CommandParameter="{Binding .}" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <Border Width="1" Background="#303A43" Margin="8,2" />
-                    <TextBlock Text="MODIFY" FontSize="9" FontWeight="Bold" Foreground="#71838F" VerticalAlignment="Center" />
-                    <ItemsControl ItemsSource="{Binding ModifyTools}">
-                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Classes="tool" Content="{Binding .}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectToolCommand}" CommandParameter="{Binding .}" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <Button Classes="tool"
-                            Content="Erase"
-                            Command="{Binding EraseCommand}"
-                            ToolTip.Tip="Erase selected entities (Delete)" />
-                </StackPanel>
+                </Border>
+
+                <ScrollViewer Grid.Row="1"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <StackPanel Orientation="Horizontal">
+                        <Border BorderBrush="#303A43" BorderThickness="0,0,1,0" Padding="6,3,7,0">
+                            <Grid RowDefinitions="*,18">
+                                <StackPanel Orientation="Horizontal" Spacing="2">
+                                    <Button Classes="ribbon-command"
+                                            Width="58"
+                                            Click="NewProject_OnClick"
+                                            ToolTip.Tip="Create a new project"
+                                            AutomationProperties.Name="New project">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Classes="ribbon-icon" Text="＋" />
+                                            <TextBlock Classes="ribbon-command-label" Text="New" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Classes="ribbon-command"
+                                            Width="82"
+                                            Click="OpenProject_OnClick"
+                                            ToolTip.Tip="Open an existing project"
+                                            AutomationProperties.Name="Open project">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Classes="ribbon-icon" Text="▱" />
+                                            <TextBlock Classes="ribbon-command-label" Text="Open project" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Classes="ribbon-command"
+                                            Width="86"
+                                            Click="OpenDrawing_OnClick"
+                                            ToolTip.Tip="Open a drawing without its project"
+                                            AutomationProperties.Name="Open drawing">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Classes="ribbon-icon" Text="▤" />
+                                            <TextBlock Classes="ribbon-command-label" Text="Open drawing" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                                <TextBlock Grid.Row="1" Classes="ribbon-group-label" Text="PROJECT" />
+                            </Grid>
+                        </Border>
+
+                        <Border BorderBrush="#303A43" BorderThickness="0,0,1,0" Padding="7,3,7,0">
+                            <Grid RowDefinitions="*,18">
+                                <StackPanel Orientation="Horizontal" Spacing="1">
+                                    <Button Classes="ribbon-command" Width="56" Command="{Binding SelectToolCommand}" CommandParameter="Select" ToolTip.Tip="Select entities" AutomationProperties.Name="Select">
+                                        <StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="⌖" /><TextBlock Classes="ribbon-command-label" Text="Select" /></StackPanel>
+                                    </Button>
+                                    <Button Classes="ribbon-command" Width="52" Command="{Binding SelectToolCommand}" CommandParameter="Line" ToolTip.Tip="Draw a line" AutomationProperties.Name="Line">
+                                        <StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="╱" /><TextBlock Classes="ribbon-command-label" Text="Line" /></StackPanel>
+                                    </Button>
+                                    <Button Classes="ribbon-command" Width="62" Command="{Binding SelectToolCommand}" CommandParameter="Polyline" ToolTip.Tip="Draw a polyline" AutomationProperties.Name="Polyline">
+                                        <StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="⌁" /><TextBlock Classes="ribbon-command-label" Text="Polyline" /></StackPanel>
+                                    </Button>
+                                    <Button Classes="ribbon-command" Width="52" Command="{Binding SelectToolCommand}" CommandParameter="Circle" ToolTip.Tip="Draw a circle" AutomationProperties.Name="Circle">
+                                        <StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="○" /><TextBlock Classes="ribbon-command-label" Text="Circle" /></StackPanel>
+                                    </Button>
+                                    <Button Classes="ribbon-command" Width="66" Command="{Binding SelectToolCommand}" CommandParameter="Rectangle" ToolTip.Tip="Draw a rectangle" AutomationProperties.Name="Rectangle">
+                                        <StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="▭" /><TextBlock Classes="ribbon-command-label" Text="Rectangle" /></StackPanel>
+                                    </Button>
+                                    <Button Classes="ribbon-command" Width="48" Command="{Binding SelectToolCommand}" CommandParameter="Text" ToolTip.Tip="Add text" AutomationProperties.Name="Text">
+                                        <StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="T" /><TextBlock Classes="ribbon-command-label" Text="Text" /></StackPanel>
+                                    </Button>
+                                    <Button Classes="ribbon-command" Width="68" Command="{Binding SelectToolCommand}" CommandParameter="Dimension" ToolTip.Tip="Add a dimension" AutomationProperties.Name="Dimension">
+                                        <StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="↔" /><TextBlock Classes="ribbon-command-label" Text="Dimension" /></StackPanel>
+                                    </Button>
+                                </StackPanel>
+                                <TextBlock Grid.Row="1" Classes="ribbon-group-label" Text="DRAW" />
+                            </Grid>
+                        </Border>
+
+                        <Border Padding="7,3,7,0">
+                            <Grid RowDefinitions="*,18">
+                                <StackPanel Orientation="Horizontal" Spacing="1">
+                                    <Button Classes="ribbon-command" Width="54" Command="{Binding SelectToolCommand}" CommandParameter="Move" ToolTip.Tip="Move selected entities" AutomationProperties.Name="Move">
+                                        <StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="✥" /><TextBlock Classes="ribbon-command-label" Text="Move" /></StackPanel>
+                                    </Button>
+                                    <Button Classes="ribbon-command" Width="54" Command="{Binding SelectToolCommand}" CommandParameter="Copy" ToolTip.Tip="Copy selected entities" AutomationProperties.Name="Copy">
+                                        <StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="⧉" /><TextBlock Classes="ribbon-command-label" Text="Copy" /></StackPanel>
+                                    </Button>
+                                    <Button Classes="ribbon-command" Width="56" Command="{Binding SelectToolCommand}" CommandParameter="Rotate" ToolTip.Tip="Rotate selected entities" AutomationProperties.Name="Rotate">
+                                        <StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="↻" /><TextBlock Classes="ribbon-command-label" Text="Rotate" /></StackPanel>
+                                    </Button>
+                                    <Button Classes="ribbon-command" Width="54" Command="{Binding SelectToolCommand}" CommandParameter="Scale" ToolTip.Tip="Scale selected entities" AutomationProperties.Name="Scale">
+                                        <StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="⤢" /><TextBlock Classes="ribbon-command-label" Text="Scale" /></StackPanel>
+                                    </Button>
+                                    <Button Classes="ribbon-command"
+                                            Width="54"
+                                            Command="{Binding EraseCommand}"
+                                            ToolTip.Tip="Erase selected entities (Delete)"
+                                            AutomationProperties.Name="Erase">
+                                        <StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="⌫" /><TextBlock Classes="ribbon-command-label" Text="Erase" /></StackPanel>
+                                    </Button>
+                                </StackPanel>
+                                <TextBlock Grid.Row="1" Classes="ribbon-group-label" Text="MODIFY" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
             </Grid>
         </Border>
 

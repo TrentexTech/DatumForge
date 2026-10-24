@@ -23,6 +23,44 @@
         <Style Selector="Button.tool:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="#25313B" />
         </Style>
+        <Style Selector="Button.ribbon-command">
+            <Setter Property="Height" Value="62" />
+            <Setter Property="Padding" Value="6,5" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="#DCE5EA" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.ribbon-command:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#25313B" />
+        </Style>
+        <Style Selector="Button.ribbon-command:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#1D4E40" />
+        </Style>
+        <Style Selector="Button.ribbon-command:disabled">
+            <Setter Property="Opacity" Value="0.35" />
+        </Style>
+        <Style Selector="TextBlock.ribbon-icon">
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#D8E3E8" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.ribbon-command-label">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="#D8E3E8" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.ribbon-group-label">
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#71838F" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="LetterSpacing" Value="0.8" />
+        </Style>
         <Style Selector="Button.title-action">
             <Setter Property="Width" Value="34" />
             <Setter Property="Height" Value="28" />
