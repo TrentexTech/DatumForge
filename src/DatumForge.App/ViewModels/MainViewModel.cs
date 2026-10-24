@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DatumForge.Core.Editing;
 using DatumForge.Core.Models;
 using DatumForge.Core.Services;
 using DatumForge.Infrastructure.Persistence;
@@ -10,6 +11,8 @@ namespace DatumForge.App.ViewModels;
 public partial class MainViewModel : ViewModelBase
 {
     private readonly ProjectStore _store = new();
+    private readonly DrawingEditJournal _editJournal = new();
+    private readonly HashSet<Guid> _selectedEntityIds = [];
 
     public MainViewModel()
     {
@@ -30,6 +33,9 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] public partial string StatusText { get; set; } = "Ready";
     [ObservableProperty] public partial string? WarningMessage { get; set; }
     [ObservableProperty] public partial string ProjectSummary { get; set; } = "No project open";
+    [ObservableProperty] public partial int EntityCount { get; set; }
+    [ObservableProperty] public partial int SelectedEntityCount { get; set; }
+    [ObservableProperty] public partial int ViewportRevision { get; set; }
 
     public bool IsWelcomeVisible => SelectedProjectTab?.IsWelcome != false;
     public bool IsWorkspaceVisible => !IsWelcomeVisible;
@@ -47,6 +53,8 @@ public partial class MainViewModel : ViewModelBase
 
     partial void OnSelectedDrawingTabChanged(DrawingTabViewModel? value)
     {
+        ResetSelection();
+        EntityCount = value?.Document.Entities.Count ?? 0;
         RefreshLayers(value?.Document);
         if (value?.Document is { } drawing)
         {
@@ -93,11 +101,20 @@ public partial class MainViewModel : ViewModelBase
         StatusText = assessment.RequiresWarning ? "Drawing opened outside its project" : $"Opened {drawing.Name}";
     }
 
-    public void NotifyDrawingChanged()
+    public void RecordEntityCreated(DrawingEntity entity)
     {
-        OnPropertyChanged(nameof(SelectedDrawingTab));
-        OnPropertyChanged(nameof(ActiveDrawing));
-        StatusText = $"{ActiveDrawing?.Entities.Count ?? 0} entities · unsaved changes";
+        if (ActiveDrawing is null) return;
+        _editJournal.RecordEntityAdded(ActiveDrawing, entity);
+        NotifyDrawingChanged($"Created {entity.Kind}");
+    }
+
+    public void UpdateSelection(IEnumerable<Guid> entityIds)
+    {
+        _selectedEntityIds.Clear();
+        _selectedEntityIds.UnionWith(entityIds);
+        SelectedEntityCount = _selectedEntityIds.Count;
+        EraseCommand.NotifyCanExecuteChanged();
+        StatusText = SelectedEntityCount == 0 ? "No selection" : $"{SelectedEntityCount} selected";
     }
 
     [RelayCommand]
@@ -120,6 +137,47 @@ public partial class MainViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(tool)) ActiveTool = tool;
         StatusText = ActiveTool == "Select" ? "Select entities" : $"{ActiveTool}: click in the viewport to draw";
     }
+
+    [RelayCommand(CanExecute = nameof(CanErase))]
+    private void Erase()
+    {
+        if (ActiveDrawing is null) return;
+        var requestedCount = _selectedEntityIds.Count;
+        var erasedCount = _editJournal.Erase(ActiveDrawing, _selectedEntityIds);
+        ResetSelection();
+        if (erasedCount == 0 && requestedCount > 0)
+        {
+            StatusText = "Selection is on a locked layer";
+            return;
+        }
+        NotifyDrawingChanged($"Erased {erasedCount} {(erasedCount == 1 ? "entity" : "entities")}");
+    }
+
+    private bool CanErase() => ActiveDrawing is not null && _selectedEntityIds.Count > 0;
+
+    [RelayCommand(CanExecute = nameof(CanUndo))]
+    private void Undo()
+    {
+        if (ActiveDrawing is null) return;
+        var description = _editJournal.Undo(ActiveDrawing);
+        if (description is null) return;
+        ResetSelection();
+        NotifyDrawingChanged($"Undid: {description}");
+    }
+
+    private bool CanUndo() => ActiveDrawing is not null && _editJournal.CanUndo(ActiveDrawing.Id);
+
+    [RelayCommand(CanExecute = nameof(CanRedo))]
+    private void Redo()
+    {
+        if (ActiveDrawing is null) return;
+        var description = _editJournal.Redo(ActiveDrawing);
+        if (description is null) return;
+        ResetSelection();
+        NotifyDrawingChanged($"Redid: {description}");
+    }
+
+    private bool CanRedo() => ActiveDrawing is not null && _editJournal.CanRedo(ActiveDrawing.Id);
 
     [RelayCommand]
     private void AddLayout()
@@ -168,6 +226,25 @@ public partial class MainViewModel : ViewModelBase
 
     [RelayCommand]
     private void DismissWarning() => WarningMessage = null;
+
+    private void NotifyDrawingChanged(string status)
+    {
+        ViewportRevision++;
+        EntityCount = ActiveDrawing?.Entities.Count ?? 0;
+        OnPropertyChanged(nameof(SelectedDrawingTab));
+        OnPropertyChanged(nameof(ActiveDrawing));
+        StatusText = $"{status} · {ActiveDrawing?.Entities.Count ?? 0} entities · unsaved";
+        UndoCommand.NotifyCanExecuteChanged();
+        RedoCommand.NotifyCanExecuteChanged();
+        EraseCommand.NotifyCanExecuteChanged();
+    }
+
+    private void ResetSelection()
+    {
+        _selectedEntityIds.Clear();
+        SelectedEntityCount = 0;
+        EraseCommand.NotifyCanExecuteChanged();
+    }
 
     private Task OpenWorkspaceAsync(ProjectWorkspace workspace)
     {

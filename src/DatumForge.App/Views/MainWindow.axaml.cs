@@ -15,7 +15,11 @@ public partial class MainWindow : Window
 
     private MainViewModel ViewModel => (MainViewModel)DataContext!;
 
-    private void Viewport_OnEntityCreated(object? sender, EventArgs e) => ViewModel.NotifyDrawingChanged();
+    private void Viewport_OnEntityCreated(object? sender, EntityCreatedEventArgs e) => ViewModel.RecordEntityCreated(e.Entity);
+    private void Viewport_OnSelectionChanged(object? sender, EntitySelectionChangedEventArgs e) => ViewModel.UpdateSelection(e.EntityIds);
+    private void Viewport_OnDeleteRequested(object? sender, EventArgs e) => ViewModel.EraseCommand.Execute(null);
+    private void Viewport_OnUndoRequested(object? sender, EventArgs e) => ViewModel.UndoCommand.Execute(null);
+    private void Viewport_OnRedoRequested(object? sender, EventArgs e) => ViewModel.RedoCommand.Execute(null);
 
     private async void NewProject_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {

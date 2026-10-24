@@ -2,13 +2,18 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using DatumForge.Core.Editing;
 using DatumForge.Core.Models;
 
 namespace DatumForge.App.Controls;
 
 public sealed class DrawingViewport : Control
 {
-    public event EventHandler? EntityCreated;
+    public event EventHandler<EntityCreatedEventArgs>? EntityCreated;
+    public event EventHandler<EntitySelectionChangedEventArgs>? SelectionChanged;
+    public event EventHandler? DeleteRequested;
+    public event EventHandler? UndoRequested;
+    public event EventHandler? RedoRequested;
 
     public static readonly StyledProperty<DrawingDocument?> DrawingProperty =
         AvaloniaProperty.Register<DrawingViewport, DrawingDocument?>(nameof(Drawing));
@@ -16,17 +21,23 @@ public sealed class DrawingViewport : Control
         AvaloniaProperty.Register<DrawingViewport, LayoutDefinition?>(nameof(Layout));
     public static readonly StyledProperty<string> ActiveToolProperty =
         AvaloniaProperty.Register<DrawingViewport, string>(nameof(ActiveTool), "Select");
+    public static readonly StyledProperty<int> RevisionTokenProperty =
+        AvaloniaProperty.Register<DrawingViewport, int>(nameof(RevisionToken));
 
     private CadPoint? _anchor;
+    private readonly HashSet<Guid> _selectedEntityIds = [];
 
     static DrawingViewport()
     {
-        AffectsRender<DrawingViewport>(DrawingProperty, LayoutProperty, ActiveToolProperty);
+        AffectsRender<DrawingViewport>(DrawingProperty, LayoutProperty, ActiveToolProperty, RevisionTokenProperty);
+        DrawingProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.ClearSelection());
+        RevisionTokenProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.ClearSelection());
     }
 
     public DrawingDocument? Drawing { get => GetValue(DrawingProperty); set => SetValue(DrawingProperty, value); }
     public LayoutDefinition? Layout { get => GetValue(LayoutProperty); set => SetValue(LayoutProperty, value); }
     public string ActiveTool { get => GetValue(ActiveToolProperty); set => SetValue(ActiveToolProperty, value); }
+    public int RevisionToken { get => GetValue(RevisionTokenProperty); set => SetValue(RevisionTokenProperty, value); }
 
     public override void Render(DrawingContext context)
     {
@@ -40,7 +51,7 @@ public sealed class DrawingViewport : Control
         {
             var layer = Drawing.Layers.FirstOrDefault(item => item.Id == entity.LayerId);
             if (layer is null || !layer.IsVisible) continue;
-            DrawEntity(context, entity, layer);
+            DrawEntity(context, entity, layer, _selectedEntityIds.Contains(entity.Id));
         }
 
         var origin = ToScreen(new CadPoint(0, 0));
@@ -52,8 +63,14 @@ public sealed class DrawingViewport : Control
     {
         base.OnPointerPressed(e);
         Focus();
-        if (Drawing is null || ActiveTool == "Select") return;
+        if (Drawing is null) return;
         var point = ToWorld(e.GetPosition(this));
+        if (ActiveTool == "Select")
+        {
+            SelectAt(point, e.KeyModifiers);
+            return;
+        }
+
         if (Layout?.SnapToGrid == true && Layout.GridSpacing > 0)
         {
             point = new CadPoint(
@@ -88,12 +105,65 @@ public sealed class DrawingViewport : Control
         AddEntity(kind, [first, point], radius, null);
     }
 
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        var control = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+        if (control && e.Key == Key.Z)
+        {
+            if (shift) RedoRequested?.Invoke(this, EventArgs.Empty);
+            else UndoRequested?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
+        else if (control && e.Key == Key.Y)
+        {
+            RedoRequested?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
+        else if ((e.Key == Key.Delete || e.Key == Key.Back) && _selectedEntityIds.Count > 0)
+        {
+            DeleteRequested?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            _anchor = null;
+            ClearSelection();
+            e.Handled = true;
+        }
+    }
+
+    public void ClearSelection()
+    {
+        if (_selectedEntityIds.Count == 0) return;
+        _selectedEntityIds.Clear();
+        SelectionChanged?.Invoke(this, new EntitySelectionChangedEventArgs([]));
+        InvalidateVisual();
+    }
+
+    private void SelectAt(CadPoint point, KeyModifiers modifiers)
+    {
+        var hit = EntityHitTester.HitTest(Drawing!, point, 8 / Math.Max(0.001, Layout?.Zoom ?? 1));
+        var additive = modifiers.HasFlag(KeyModifiers.Control) || modifiers.HasFlag(KeyModifiers.Shift);
+        if (!additive) _selectedEntityIds.Clear();
+
+        if (hit is not null)
+        {
+            if (additive && _selectedEntityIds.Contains(hit.Id)) _selectedEntityIds.Remove(hit.Id);
+            else _selectedEntityIds.Add(hit.Id);
+        }
+
+        SelectionChanged?.Invoke(this, new EntitySelectionChangedEventArgs([.. _selectedEntityIds]));
+        InvalidateVisual();
+    }
+
     private void AddEntity(EntityKind kind, List<CadPoint> points, double radius, string? text)
     {
-        var layer = Drawing!.Layers.FirstOrDefault(item => item.IsVisible && !item.IsLocked) ?? Drawing.Layers.FirstOrDefault();
+        var layer = Drawing!.Layers.FirstOrDefault(item => item.IsVisible && !item.IsLocked);
         if (layer is null) return;
         Drawing.Entities.Add(new DrawingEntity { Kind = kind, LayerId = layer.Id, Points = points, Radius = radius, Text = text });
-        EntityCreated?.Invoke(this, EventArgs.Empty);
+        EntityCreated?.Invoke(this, new EntityCreatedEventArgs(Drawing.Entities[^1]));
         InvalidateVisual();
     }
 
@@ -108,7 +178,7 @@ public sealed class DrawingViewport : Control
         for (var y = origin.Y % spacing; y < Bounds.Height; y += spacing) context.DrawLine(pen, new Point(0, y), new Point(Bounds.Width, y));
     }
 
-    private void DrawEntity(DrawingContext context, DrawingEntity entity, DrawingLayer layer)
+    private void DrawEntity(DrawingContext context, DrawingEntity entity, DrawingLayer layer, bool isSelected)
     {
         var brush = ParseBrush(layer.Color, "#E8EDF2");
         brush.Opacity = Math.Clamp(layer.Opacity, 0, 1);
@@ -121,7 +191,9 @@ public sealed class DrawingViewport : Control
             CadLineType.Center => new DashStyle([12, 4, 2, 4], 0),
             _ => null
         };
-        var pen = new Pen(brush, thickness, dashStyle: dash);
+        var pen = isSelected
+            ? new Pen(new SolidColorBrush(Color.Parse("#65D6FF")), thickness + 2)
+            : new Pen(brush, thickness, dashStyle: dash);
         if (entity.Points.Count == 0) return;
         var first = ToScreen(entity.Points[0]);
         var second = entity.Points.Count > 1 ? ToScreen(entity.Points[1]) : first;
@@ -142,6 +214,16 @@ public sealed class DrawingViewport : Control
             default:
                 context.DrawLine(pen, first, second);
                 break;
+        }
+
+        if (isSelected)
+        {
+            foreach (var grip in entity.Points)
+            {
+                var screenPoint = ToScreen(grip);
+                context.FillRectangle(Brushes.White, new Rect(screenPoint.X - 3, screenPoint.Y - 3, 6, 6));
+                context.DrawRectangle(new Pen(new SolidColorBrush(Color.Parse("#167FA4")), 1), new Rect(screenPoint.X - 3, screenPoint.Y - 3, 6, 6));
+            }
         }
     }
 
@@ -164,4 +246,14 @@ public sealed class DrawingViewport : Control
         try { return new SolidColorBrush(Color.Parse(value ?? fallback)); }
         catch (FormatException) { return new SolidColorBrush(Color.Parse(fallback)); }
     }
+}
+
+public sealed class EntityCreatedEventArgs(DrawingEntity entity) : EventArgs
+{
+    public DrawingEntity Entity { get; } = entity;
+}
+
+public sealed class EntitySelectionChangedEventArgs(IReadOnlyCollection<Guid> entityIds) : EventArgs
+{
+    public IReadOnlyCollection<Guid> EntityIds { get; } = entityIds;
 }

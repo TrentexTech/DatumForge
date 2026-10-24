@@ -41,6 +41,9 @@
                 </ItemsControl>
                 <Border Grid.Column="5" Width="1" Background="#303A43" Margin="12,2" />
                 <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="3">
+                    <Button Classes="tool" Content="Undo" Command="{Binding UndoCommand}" ToolTip.Tip="Undo (Ctrl+Z)" />
+                    <Button Classes="tool" Content="Redo" Command="{Binding RedoCommand}" ToolTip.Tip="Redo (Ctrl+Y)" />
+                    <Button Classes="tool" Content="Erase" Command="{Binding EraseCommand}" ToolTip.Tip="Erase selected entities (Delete)" />
                     <Button Classes="tool" Content="＋ Layer" Command="{Binding AddLayerCommand}" />
                     <Button Classes="tool" Content="Properties" />
                 </StackPanel>
@@ -137,7 +140,17 @@
                 </Border>
 
                 <Border Grid.Column="1" Background="#101419">
-                    <controls:DrawingViewport Drawing="{Binding ActiveDrawing}" Layout="{Binding SelectedLayout}" ActiveTool="{Binding ActiveTool}" EntityCreated="Viewport_OnEntityCreated" Focusable="True" />
+                    <controls:DrawingViewport x:Name="DrawingSurface"
+                                              Drawing="{Binding ActiveDrawing}"
+                                              Layout="{Binding SelectedLayout}"
+                                              ActiveTool="{Binding ActiveTool}"
+                                              RevisionToken="{Binding ViewportRevision}"
+                                              EntityCreated="Viewport_OnEntityCreated"
+                                              SelectionChanged="Viewport_OnSelectionChanged"
+                                              DeleteRequested="Viewport_OnDeleteRequested"
+                                              UndoRequested="Viewport_OnUndoRequested"
+                                              RedoRequested="Viewport_OnRedoRequested"
+                                              Focusable="True" />
                 </Border>
 
                 <!-- Properties -->
@@ -150,7 +163,8 @@
                         <TextBlock Text="{Binding ProjectSummary}" Foreground="#8FA0AA" TextWrapping="Wrap" />
                         <TextBlock Text="DRAWING" FontSize="9" Foreground="#6F828E" FontWeight="Bold" Margin="0,8,0,0" />
                         <TextBlock Text="{Binding SelectedDrawingTab.Document.Name}" FontWeight="SemiBold" />
-                        <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Entities" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding SelectedDrawingTab.Document.Entities.Count}" /></Grid>
+                        <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Entities" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding EntityCount}" /></Grid>
+                        <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Selected" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding SelectedEntityCount}" /></Grid>
                         <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Units" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding SelectedDrawingTab.Document.Units}" /></Grid>
                         <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Revision" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding SelectedDrawingTab.Document.Revision}" /></Grid>
                         <TextBlock Text="LAYOUT" FontSize="9" Foreground="#6F828E" FontWeight="Bold" Margin="0,8,0,0" />

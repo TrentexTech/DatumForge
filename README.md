@@ -15,9 +15,11 @@ DatumForge is an open-source, cross-platform 2D CAD workspace built with C#, .NE
 - portable `.dfproj` project manifests and `.dfdraw` drawing documents
 - automatic project and drawing snapshots under `.datumforge/history`
 - explicit warning when a project-associated drawing is opened without its owning project
-- tests for serialization, history, version handling, and association safety
+- tests for serialization, history, version handling, association safety, hit testing, and edit journaling
 
-The geometry editor is deliberately small today. Selection, constraints, precision input, undo/redo, references, DXF/DWG interoperability, printing, and production-grade CAD kernels remain future work.
+The geometry editor now includes single and additive selection, endpoint grips, locked-layer-aware erase, and per-drawing undo/redo for create and erase operations. Constraints, precision input, transforms, references, DXF/DWG interoperability, printing, and production-grade CAD kernels remain future work.
+
+Select an entity by clicking it with the Select tool. Hold Ctrl or Shift to toggle entities in the selection set. Delete or Backspace erases the selection; Ctrl+Z undoes and Ctrl+Y or Ctrl+Shift+Z redoes while the viewport has focus.
 
 ## Run locally
 
@@ -50,7 +52,7 @@ Both public file types are versioned, indented JSON. History is local project da
 
 ## Architecture
 
-- `DatumForge.Core` — file/domain models and project-association policy
+- `DatumForge.Core` — file/domain models, geometry hit testing, edit journaling, and project-association policy
 - `DatumForge.Infrastructure` — guarded paths, atomic JSON persistence, history snapshots
 - `DatumForge.App` — Avalonia shell, view models, and the 2D viewport
 - `DatumForge.Tests` — headless domain and persistence tests

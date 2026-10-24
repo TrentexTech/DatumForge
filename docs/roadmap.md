@@ -8,9 +8,11 @@
 
 ## Editing core
 
-- selection sets, grips, erase/move/copy/rotate/scale
+- single and additive selection, endpoint grips, locked-layer-aware erase — complete
+- undo/redo transaction journal for create and erase operations — complete
+- move/copy/rotate/scale
 - command line and numeric coordinate input
-- undo/redo transaction journal
+- extend the transaction journal to transform and property edits
 - object snaps, orthographic and polar tracking
 - precision geometry and spatial indexing
 
