@@ -3,6 +3,7 @@
 ## Foundation — current
 
 - project/drawing formats, history, layouts, layers, workspace shell
+- per-user settings, window state, and recent projects/drawings — complete
 - basic viewport rendering and primitive creation
 - cross-platform build and test automation
 

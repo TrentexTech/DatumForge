@@ -12,6 +12,9 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Opened += (_, _) => RestoreWindowSettings();
+        SizeChanged += (_, _) => CaptureNormalWindowSize();
+        Closing += (_, _) => SaveWindowSettings();
     }
 
     private MainViewModel ViewModel => (MainViewModel)DataContext!;
@@ -31,6 +34,31 @@ public partial class MainWindow : Window
         WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     private void Close_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Close();
+
+    private void RestoreWindowSettings()
+    {
+        if (DataContext is not MainViewModel viewModel) return;
+        var settings = viewModel.UserSettings.Window;
+        if (double.IsFinite(settings.Width)) Width = Math.Clamp(settings.Width, MinWidth, 7680);
+        if (double.IsFinite(settings.Height)) Height = Math.Clamp(settings.Height, MinHeight, 4320);
+        if (settings.IsMaximized) WindowState = WindowState.Maximized;
+    }
+
+    private void CaptureNormalWindowSize()
+    {
+        if (DataContext is not MainViewModel viewModel || WindowState != WindowState.Normal) return;
+        viewModel.UserSettings.Window.Width = Math.Max(MinWidth, ClientSize.Width);
+        viewModel.UserSettings.Window.Height = Math.Max(MinHeight, ClientSize.Height);
+    }
+
+    private void SaveWindowSettings()
+    {
+        if (DataContext is not MainViewModel viewModel) return;
+        CaptureNormalWindowSize();
+        viewModel.UserSettings.Window.IsMaximized = WindowState == WindowState.Maximized;
+        try { viewModel.SaveUserSettings(); }
+        catch (Exception exception) { viewModel.StatusText = $"Could not save user settings: {exception.Message}"; }
+    }
 
     private void CoordinateInput_OnKeyDown(object? sender, KeyEventArgs e)
     {

@@ -10,20 +10,33 @@ namespace DatumForge.App.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
-    private readonly ProjectStore _store = new();
+    private readonly ProjectStore _store;
+    private readonly UserSettingsStore _userSettingsStore;
     private readonly DrawingEditJournal _editJournal = new();
     private readonly HashSet<Guid> _selectedEntityIds = [];
 
-    public MainViewModel()
+    public MainViewModel() : this(new ProjectStore(), new UserSettingsStore()) { }
+
+    public MainViewModel(ProjectStore store, UserSettingsStore userSettingsStore)
     {
+        _store = store;
+        _userSettingsStore = userSettingsStore;
+        UserSettings = _userSettingsStore.Load();
         ProjectTabs.Add(ProjectTabViewModel.Welcome);
         SelectedProjectTab = ProjectTabs[0];
+        RefreshRecentItems();
+        if (!string.IsNullOrWhiteSpace(_userSettingsStore.RecoveryNotice))
+            StatusText = _userSettingsStore.RecoveryNotice;
     }
 
+    public UserSettings UserSettings { get; }
+    public string UserDataDirectory => _userSettingsStore.DataDirectoryPath;
     public ObservableCollection<ProjectTabViewModel> ProjectTabs { get; } = [];
     public ObservableCollection<DrawingTabViewModel> DrawingTabs { get; } = [];
     public ObservableCollection<LayoutDefinition> Layouts { get; } = [];
     public ObservableCollection<LayerItemViewModel> Layers { get; } = [];
+    public ObservableCollection<RecentFileEntry> RecentProjects { get; } = [];
+    public ObservableCollection<RecentFileEntry> RecentDrawings { get; } = [];
     public IReadOnlyList<string> DrawingTools { get; } = ["Select", "Line", "Polyline", "Circle", "Rectangle", "Text", "Dimension"];
     public IReadOnlyList<string> ModifyTools { get; } = ["Move", "Copy", "Rotate", "Scale"];
 
@@ -42,6 +55,9 @@ public partial class MainViewModel : ViewModelBase
     public bool IsWelcomeVisible => SelectedProjectTab?.IsWelcome != false;
     public bool IsWorkspaceVisible => !IsWelcomeVisible;
     public bool HasWarning => !string.IsNullOrWhiteSpace(WarningMessage);
+    public bool HasRecentProjects => RecentProjects.Count > 0;
+    public bool HasRecentDrawings => RecentDrawings.Count > 0;
+    public bool HasNoRecentItems => !HasRecentProjects && !HasRecentDrawings;
     public DrawingDocument? ActiveDrawing => SelectedDrawingTab?.Document;
     public string WindowTitle => SelectedProjectTab?.Workspace is { } workspace ? $"{workspace.Project.Name} — DatumForge" : "DatumForge";
     public string GridStatus => SelectedLayout?.ShowGrid == true ? "Grid on" : "Grid off";
@@ -82,13 +98,17 @@ public partial class MainViewModel : ViewModelBase
 
     public async Task CreateProjectAsync(string directory, string name)
     {
-        await OpenWorkspaceAsync(await _store.CreateAsync(directory, name));
+        var workspace = await _store.CreateAsync(directory, name);
+        await OpenWorkspaceAsync(workspace);
+        await RememberProjectAsync(workspace.ProjectFilePath, workspace.Project.Name);
         StatusText = $"Created {name}";
     }
 
     public async Task OpenProjectAsync(string path)
     {
-        await OpenWorkspaceAsync(await _store.LoadProjectAsync(path));
+        var workspace = await _store.LoadProjectAsync(path);
+        await OpenWorkspaceAsync(workspace);
+        await RememberProjectAsync(workspace.ProjectFilePath, workspace.Project.Name);
         StatusText = $"Opened {Path.GetFileName(path)}";
     }
 
@@ -112,7 +132,46 @@ public partial class MainViewModel : ViewModelBase
         var tab = new DrawingTabViewModel(drawing, path, true);
         DrawingTabs.Add(tab);
         SelectedDrawingTab = tab;
+        await RememberDrawingAsync(path, drawing.Name);
         StatusText = assessment.RequiresWarning ? "Drawing opened outside its project" : $"Opened {drawing.Name}";
+    }
+
+    public Task SaveUserSettingsAsync() => _userSettingsStore.SaveAsync(UserSettings);
+
+    public void SaveUserSettings() => _userSettingsStore.Save(UserSettings);
+
+    [RelayCommand]
+    private async Task OpenRecentProjectAsync(RecentFileEntry? entry)
+    {
+        if (entry is null) return;
+        if (!File.Exists(entry.Path))
+        {
+            UserSettings.ForgetProject(entry.Path);
+            RefreshRecentItems();
+            await SaveUserSettingsAsync();
+            StatusText = $"Removed missing project: {entry.DisplayName}";
+            return;
+        }
+
+        try { await OpenProjectAsync(entry.Path); }
+        catch (Exception exception) { StatusText = $"Could not open recent project: {exception.Message}"; }
+    }
+
+    [RelayCommand]
+    private async Task OpenRecentDrawingAsync(RecentFileEntry? entry)
+    {
+        if (entry is null) return;
+        if (!File.Exists(entry.Path))
+        {
+            UserSettings.ForgetDrawing(entry.Path);
+            RefreshRecentItems();
+            await SaveUserSettingsAsync();
+            StatusText = $"Removed missing drawing: {entry.DisplayName}";
+            return;
+        }
+
+        try { await OpenDrawingAsync(entry.Path); }
+        catch (Exception exception) { StatusText = $"Could not open recent drawing: {exception.Message}"; }
     }
 
     public void RecordEntityCreated(DrawingEntity entity)
@@ -449,6 +508,31 @@ public partial class MainViewModel : ViewModelBase
         Layers.Clear();
         if (drawing is null) return;
         foreach (var layer in drawing.Layers) Layers.Add(new LayerItemViewModel(layer));
+    }
+
+    private async Task RememberProjectAsync(string path, string displayName)
+    {
+        UserSettings.RememberProject(path, displayName);
+        RefreshRecentItems();
+        await SaveUserSettingsAsync();
+    }
+
+    private async Task RememberDrawingAsync(string path, string displayName)
+    {
+        UserSettings.RememberDrawing(path, displayName);
+        RefreshRecentItems();
+        await SaveUserSettingsAsync();
+    }
+
+    private void RefreshRecentItems()
+    {
+        RecentProjects.Clear();
+        foreach (var entry in UserSettings.RecentProjects) RecentProjects.Add(entry);
+        RecentDrawings.Clear();
+        foreach (var entry in UserSettings.RecentDrawings) RecentDrawings.Add(entry);
+        OnPropertyChanged(nameof(HasRecentProjects));
+        OnPropertyChanged(nameof(HasRecentDrawings));
+        OnPropertyChanged(nameof(HasNoRecentItems));
     }
 
     private static string BuildSummary(ProjectWorkspace workspace) =>

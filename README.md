@@ -15,6 +15,7 @@ DatumForge is an open-source, cross-platform 2D CAD workspace built with C#, .NE
 - layers with visibility, locking, color, linetype, lineweight, opacity, printability, and grouping in the file model
 - portable `.dfproj` project manifests and `.dfdraw` drawing documents
 - automatic project and drawing snapshots under `.datumforge/history`
+- per-user settings, window state, and reopenable recent projects/drawings stored outside project files
 - explicit warning when a project-associated drawing is opened without its owning project
 - tests for serialization, history, version handling, association safety, hit testing, and edit journaling
 
@@ -57,7 +58,7 @@ My Project/
     └── history/
 ```
 
-Both public file types are versioned, indented JSON. History is local project data and is intentionally kept beside the project rather than inside the Git repository for DatumForge itself. See [docs/file-formats.md](docs/file-formats.md).
+Both public file types are versioned, indented JSON. History is local project data and is intentionally kept beside the project rather than inside the Git repository for DatumForge itself. Application preferences and recent-file lists are stored separately in the operating system's per-user application-data folder. See [docs/file-formats.md](docs/file-formats.md) and [docs/user-data.md](docs/user-data.md).
 
 ## Architecture
 

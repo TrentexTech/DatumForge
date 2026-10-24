@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:DatumForge.App.ViewModels"
         xmlns:controls="using:DatumForge.App.Controls"
+        xmlns:persistence="using:DatumForge.Infrastructure.Persistence"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1440" d:DesignHeight="900"
@@ -266,6 +267,63 @@
                             <Button Classes="primary" Content="Create a project" Click="NewProject_OnClick" />
                             <Button Content="Open existing project" Padding="18,10" Click="OpenProject_OnClick" />
                         </StackPanel>
+                        <Border Height="1" Background="#29333B" Margin="0,8,0,0" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="22">
+                            <StackPanel>
+                                <TextBlock Text="RECENT PROJECTS" FontSize="10" FontWeight="Bold" Foreground="#7C909C" Margin="0,0,0,5" />
+                                <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasRecentProjects}">
+                                    <ItemsControl ItemsSource="{Binding RecentProjects}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="persistence:RecentFileEntry">
+                                                <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenRecentProjectCommand}"
+                                                        CommandParameter="{Binding .}"
+                                                        Background="Transparent"
+                                                        BorderBrush="Transparent"
+                                                        Padding="7,5"
+                                                        HorizontalContentAlignment="Stretch"
+                                                        ToolTip.Tip="{Binding Path}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding Location}" FontSize="10" Foreground="#71838F" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="RECENT DRAWINGS" FontSize="10" FontWeight="Bold" Foreground="#7C909C" Margin="0,0,0,5" />
+                                <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasRecentDrawings}">
+                                    <ItemsControl ItemsSource="{Binding RecentDrawings}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="persistence:RecentFileEntry">
+                                                <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenRecentDrawingCommand}"
+                                                        CommandParameter="{Binding .}"
+                                                        Background="Transparent"
+                                                        BorderBrush="Transparent"
+                                                        Padding="7,5"
+                                                        HorizontalContentAlignment="Stretch"
+                                                        ToolTip.Tip="{Binding Path}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding Location}" FontSize="10" Foreground="#71838F" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="No recent projects or drawings yet."
+                                   IsVisible="{Binding HasNoRecentItems}"
+                                   Foreground="#71838F"
+                                   FontStyle="Italic" />
+                        <TextBlock Text="Recents and preferences are saved between sessions."
+                                   FontSize="10"
+                                   Foreground="#5F727E"
+                                   ToolTip.Tip="{Binding UserDataDirectory}" />
                     </StackPanel>
                     <Border Grid.Column="1" Classes="panel" CornerRadius="12" Margin="60,30,0,30" Padding="30">
                         <StackPanel Spacing="20">
