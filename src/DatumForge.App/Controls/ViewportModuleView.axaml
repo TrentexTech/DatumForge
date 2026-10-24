@@ -80,7 +80,7 @@
                     <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Revision" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding Owner.SelectedDrawingTab.Document.Revision}" /></Grid>
                     <TextBlock Text="LAYOUT" FontSize="9" Foreground="#6F828E" FontWeight="Bold" Margin="0,8,0,0" />
                     <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Grid spacing" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding Owner.SelectedLayout.GridSpacing, StringFormat='{}{0:0.##}'}" /></Grid>
-                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Zoom" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding Owner.SelectedLayout.Zoom, StringFormat='{}{0:P0}'}" /></Grid>
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Zoom" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding Owner.ZoomStatus}" /></Grid>
                     <TextBlock Text="OBJECT SNAPS" FontSize="9" Foreground="#6F828E" FontWeight="Bold" Margin="0,8,0,0" />
                     <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
                         <CheckBox Content="Endpoint" IsChecked="{Binding Owner.SnapEndpointEnabled}" />

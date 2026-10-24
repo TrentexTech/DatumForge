@@ -134,6 +134,8 @@ public sealed class MainViewModelTests : IDisposable
         await viewModel.OpenProjectAsync(workspace.ProjectFilePath);
         viewModel.SelectedLayout!.Zoom = 1.5;
         viewModel.SelectedLayout.Pan = new CadPoint(20, -10);
+        var changedProperties = new List<string?>();
+        viewModel.PropertyChanged += (_, args) => changedProperties.Add(args.PropertyName);
 
         viewModel.NotifyViewportChanged();
         await viewModel.SaveUserSettingsAsync();
@@ -141,6 +143,8 @@ public sealed class MainViewModelTests : IDisposable
         Assert.False(viewModel.HasUnsavedWork);
         Assert.Contains("150", viewModel.StatusText, StringComparison.Ordinal);
         Assert.EndsWith("zoom", viewModel.StatusText, StringComparison.Ordinal);
+        Assert.Equal($"{1.5:P0}", viewModel.ZoomStatus);
+        Assert.Contains(nameof(MainViewModel.ZoomStatus), changedProperties);
         var savedSettings = await settingsStore.LoadAsync();
         Assert.True(savedSettings.TryGetProjectView(projectId, layoutId, out var savedView));
         Assert.Equal(1.5, savedView.Zoom);

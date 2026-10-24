@@ -401,7 +401,7 @@
                         <Button Classes="tool" Content="{Binding SnapStatus}" Command="{Binding ToggleSnapCommand}" />
                         <Button Classes="tool" Content="{Binding ObjectSnapStatus}" Command="{Binding ToggleObjectSnapCommand}" />
                         <Border Width="1" Background="#334049" Margin="7,1" />
-                        <TextBlock Text="{Binding SelectedLayout.Zoom, StringFormat='{}{0:P0}'}" Width="48" TextAlignment="Center" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding ZoomStatus}" Width="48" TextAlignment="Center" VerticalAlignment="Center" />
                     </StackPanel>
                 </Grid>
             </Border>

@@ -92,6 +92,7 @@ public partial class MainViewModel : ViewModelBase
     public string PolarStatus => SelectedLayout?.PolarTracking == true ? "Polar on" : "Polar off";
     public string SnapStatus => SelectedLayout?.SnapToGrid == true ? "Grid snap on" : "Grid snap off";
     public string ObjectSnapStatus => SelectedLayout?.SnapToObjects == true ? "Object snap on" : "Object snap off";
+    public string ZoomStatus => SelectedLayout is null ? "—" : $"{SelectedLayout.Zoom:P0}";
     public string ToolStatus => $"TOOL: {ActiveTool.ToUpperInvariant()}";
     public string SaveToolTip => BuildShortcutToolTip("Save", KeyBindingDefaults.Save);
     public string UndoToolTip => BuildShortcutToolTip("Undo", KeyBindingDefaults.Undo);
@@ -320,7 +321,7 @@ public partial class MainViewModel : ViewModelBase
         if (SelectedLayout is null) return;
         if (SelectedProjectTab?.Workspace?.Project is { } project)
             UserSettings.RememberProjectView(project.Id, SelectedLayout.Id, SelectedLayout.Zoom, SelectedLayout.Pan);
-        OnPropertyChanged(nameof(SelectedLayout));
+        OnPropertyChanged(nameof(ZoomStatus));
         StatusText = $"View updated · {SelectedLayout.Zoom:P0} zoom";
     }
 
@@ -675,6 +676,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(SnapMidpointEnabled));
         OnPropertyChanged(nameof(SnapCenterEnabled));
         OnPropertyChanged(nameof(SnapIntersectionEnabled));
+        OnPropertyChanged(nameof(ZoomStatus));
         OnPropertyChanged(nameof(SelectedLayout));
     }
 

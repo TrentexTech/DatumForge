@@ -29,6 +29,7 @@ public sealed class DrawingViewport : Control
     private CadPoint? _previewPoint;
     private ObjectSnapResult? _snapResult;
     private readonly HashSet<Guid> _selectedEntityIds = [];
+    private Point? _lastPointerPosition;
     private Point? _lastPanPosition;
     private bool _panChangeReported;
 
@@ -36,7 +37,8 @@ public sealed class DrawingViewport : Control
     {
         AffectsRender<DrawingViewport>(DrawingProperty, LayoutProperty, ActiveToolProperty, RevisionTokenProperty);
         DrawingProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.ClearSelection());
-        RevisionTokenProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.ClearSelection());
+        LayoutProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.RefreshPointerFeedback());
+        RevisionTokenProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.RefreshFromModel());
         ActiveToolProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.ResetInteraction());
     }
 
@@ -85,6 +87,7 @@ public sealed class DrawingViewport : Control
     {
         base.OnPointerPressed(e);
         Focus();
+        _lastPointerPosition = e.GetPosition(this);
         if (Layout is not null && e.GetCurrentPoint(this).Properties.IsMiddleButtonPressed)
         {
             _previewPoint = null;
@@ -112,9 +115,10 @@ public sealed class DrawingViewport : Control
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
+        _lastPointerPosition = e.GetPosition(this);
         if (_lastPanPosition is { } previous && Layout is not null)
         {
-            var current = e.GetPosition(this);
+            var current = _lastPointerPosition.Value;
             var delta = current - previous;
             _lastPanPosition = current;
             if (delta.X != 0 || delta.Y != 0)
@@ -138,7 +142,7 @@ public sealed class DrawingViewport : Control
             return;
         }
 
-        var pointer = ToWorld(e.GetPosition(this));
+        var pointer = ToWorld(_lastPointerPosition.Value);
         _previewPoint = ResolvePointerPoint(pointer);
         InvalidateVisual();
     }
@@ -146,6 +150,7 @@ public sealed class DrawingViewport : Control
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
+        _lastPointerPosition = null;
         if (_previewPoint is null && _snapResult is null) return;
         _previewPoint = null;
         _snapResult = null;
@@ -183,6 +188,7 @@ public sealed class DrawingViewport : Control
         base.OnPointerWheelChanged(e);
         if (Layout is null || e.Delta.Y == 0) return;
         var pointer = e.GetPosition(this);
+        _lastPointerPosition = pointer;
         var view = ViewportNavigation.ZoomAt(
             Layout.Pan,
             Layout.Zoom,
@@ -208,9 +214,7 @@ public sealed class DrawingViewport : Control
         base.OnKeyDown(e);
         if (e.Key == Key.Escape)
         {
-            _anchor = null;
-            _previewPoint = null;
-            _snapResult = null;
+            ResetInteraction();
             ClearSelection();
             e.Handled = true;
         }
@@ -241,6 +245,25 @@ public sealed class DrawingViewport : Control
         _anchor = null;
         _previewPoint = null;
         _snapResult = null;
+        InvalidateVisual();
+    }
+
+    private void RefreshFromModel()
+    {
+        ClearSelection();
+        RefreshPointerFeedback();
+    }
+
+    private void RefreshPointerFeedback()
+    {
+        if (_lastPointerPosition is { } pointer && Drawing is not null && ActiveTool != "Select")
+            _previewPoint = ResolvePointerPoint(ToWorld(pointer));
+        else
+        {
+            _previewPoint = null;
+            _snapResult = null;
+        }
+
         InvalidateVisual();
     }
 
