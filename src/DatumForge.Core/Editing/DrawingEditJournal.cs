@@ -30,6 +30,70 @@ public sealed class DrawingEditJournal
         return removed.Length;
     }
 
+    public int Move(DrawingDocument drawing, IEnumerable<Guid> entityIds, CadPoint reference, CadPoint target)
+    {
+        var dx = target.X - reference.X;
+        var dy = target.Y - reference.Y;
+        if (Math.Abs(dx) < 1e-9 && Math.Abs(dy) < 1e-9) return 0;
+        return Transform(drawing, entityIds, "Move", entity =>
+            entity.Points = entity.Points.Select(point => new CadPoint(point.X + dx, point.Y + dy)).ToList());
+    }
+
+    public int Copy(DrawingDocument drawing, IEnumerable<Guid> entityIds, CadPoint reference, CadPoint target)
+    {
+        var dx = target.X - reference.X;
+        var dy = target.Y - reference.Y;
+        if (Math.Abs(dx) < 1e-9 && Math.Abs(dy) < 1e-9) return 0;
+
+        var source = EditableEntities(drawing, entityIds).ToArray();
+        if (source.Length == 0) return 0;
+        var copies = source.Select(entity =>
+        {
+            var copy = Clone(entity);
+            copy.Id = Guid.NewGuid();
+            copy.Points = copy.Points.Select(point => new CadPoint(point.X + dx, point.Y + dy)).ToList();
+            return copy;
+        }).ToArray();
+        drawing.Entities.AddRange(copies);
+        Push(drawing.Id, new AddEntitiesEdit("Copy", copies.Select(Clone).ToArray()));
+        return copies.Length;
+    }
+
+    public int Rotate(DrawingDocument drawing, IEnumerable<Guid> entityIds, CadPoint reference, CadPoint target)
+    {
+        var ids = EditableEntities(drawing, entityIds).Select(entity => entity.Id).ToArray();
+        var center = EntityGeometry.SelectionCenter(drawing, ids);
+        if (center is null) return 0;
+        var angle = EntityGeometry.AngleBetween(center.Value, reference, target);
+        if (!double.IsFinite(angle) || Math.Abs(angle) < 1e-9) return 0;
+        var cosine = Math.Cos(angle);
+        var sine = Math.Sin(angle);
+        return Transform(drawing, ids, "Rotate", entity => entity.Points = entity.Points.Select(point =>
+        {
+            var x = point.X - center.Value.X;
+            var y = point.Y - center.Value.Y;
+            return new CadPoint(
+                center.Value.X + x * cosine - y * sine,
+                center.Value.Y + x * sine + y * cosine);
+        }).ToList());
+    }
+
+    public int Scale(DrawingDocument drawing, IEnumerable<Guid> entityIds, CadPoint reference, CadPoint target)
+    {
+        var ids = EditableEntities(drawing, entityIds).Select(entity => entity.Id).ToArray();
+        var center = EntityGeometry.SelectionCenter(drawing, ids);
+        if (center is null) return 0;
+        var factor = EntityGeometry.ScaleBetween(center.Value, reference, target);
+        if (!double.IsFinite(factor) || factor <= 0 || Math.Abs(factor - 1) < 1e-9) return 0;
+        return Transform(drawing, ids, "Scale", entity =>
+        {
+            entity.Points = entity.Points.Select(point => new CadPoint(
+                center.Value.X + (point.X - center.Value.X) * factor,
+                center.Value.Y + (point.Y - center.Value.Y) * factor)).ToList();
+            entity.Radius *= factor;
+        });
+    }
+
     public string? Undo(DrawingDocument drawing)
     {
         var state = StateFor(drawing.Id);
@@ -55,6 +119,24 @@ public sealed class DrawingEditJournal
         var state = StateFor(drawingId);
         state.Undo.Push(edit);
         state.Redo.Clear();
+    }
+
+    private int Transform(DrawingDocument drawing, IEnumerable<Guid> entityIds, string description, Action<DrawingEntity> transform)
+    {
+        var entities = EditableEntities(drawing, entityIds).ToArray();
+        if (entities.Length == 0) return 0;
+        var before = entities.Select(Clone).ToArray();
+        foreach (var entity in entities) transform(entity);
+        var after = entities.Select(Clone).ToArray();
+        Push(drawing.Id, new TransformEntitiesEdit(description, before, after));
+        return entities.Length;
+    }
+
+    private static IEnumerable<DrawingEntity> EditableEntities(DrawingDocument drawing, IEnumerable<Guid> entityIds)
+    {
+        var requestedIds = entityIds.ToHashSet();
+        var lockedLayerIds = drawing.Layers.Where(layer => layer.IsLocked).Select(layer => layer.Id).ToHashSet();
+        return drawing.Entities.Where(entity => requestedIds.Contains(entity.Id) && !lockedLayerIds.Contains(entity.LayerId));
     }
 
     private JournalState StateFor(Guid drawingId)
@@ -97,6 +179,43 @@ public sealed class DrawingEditJournal
         public string Description => $"Create {Entity.Kind}";
         public void Undo(DrawingDocument drawing) => drawing.Entities.RemoveAll(item => item.Id == Entity.Id);
         public void Redo(DrawingDocument drawing) => drawing.Entities.Add(Clone(Entity));
+    }
+
+    private sealed record AddEntitiesEdit(string Action, IReadOnlyList<DrawingEntity> Entities) : IDrawingEdit
+    {
+        public string Description => $"{Action} {(Entities.Count == 1 ? "entity" : $"{Entities.Count} entities")}";
+
+        public void Undo(DrawingDocument drawing)
+        {
+            var ids = Entities.Select(entity => entity.Id).ToHashSet();
+            drawing.Entities.RemoveAll(entity => ids.Contains(entity.Id));
+        }
+
+        public void Redo(DrawingDocument drawing) => drawing.Entities.AddRange(Entities.Select(Clone));
+    }
+
+    private sealed record TransformEntitiesEdit(
+        string Action,
+        IReadOnlyList<DrawingEntity> Before,
+        IReadOnlyList<DrawingEntity> After) : IDrawingEdit
+    {
+        public string Description => $"{Action} {(Before.Count == 1 ? "entity" : $"{Before.Count} entities")}";
+        public void Undo(DrawingDocument drawing) => Apply(drawing, Before);
+        public void Redo(DrawingDocument drawing) => Apply(drawing, After);
+
+        private static void Apply(DrawingDocument drawing, IEnumerable<DrawingEntity> snapshots)
+        {
+            foreach (var snapshot in snapshots)
+            {
+                var entity = drawing.Entities.FirstOrDefault(item => item.Id == snapshot.Id);
+                if (entity is null) continue;
+                entity.Kind = snapshot.Kind;
+                entity.LayerId = snapshot.LayerId;
+                entity.Points = [.. snapshot.Points];
+                entity.Radius = snapshot.Radius;
+                entity.Text = snapshot.Text;
+            }
+        }
     }
 
     private sealed record EraseEntitiesEdit(IReadOnlyList<IndexedEntity> Entities) : IDrawingEdit

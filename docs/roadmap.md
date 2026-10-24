@@ -10,9 +10,9 @@
 
 - single and additive selection, endpoint grips, locked-layer-aware erase — complete
 - undo/redo transaction journal for create and erase operations — complete
-- move/copy/rotate/scale
+- move/copy/rotate/scale with two-point viewport input and undo/redo — complete
 - command line and numeric coordinate input
-- extend the transaction journal to transform and property edits
+- extend the transaction journal to property edits
 - object snaps, orthographic and polar tracking
 - precision geometry and spatial indexing
 

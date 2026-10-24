@@ -24,7 +24,8 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<DrawingTabViewModel> DrawingTabs { get; } = [];
     public ObservableCollection<LayoutDefinition> Layouts { get; } = [];
     public ObservableCollection<LayerItemViewModel> Layers { get; } = [];
-    public IReadOnlyList<string> Tools { get; } = ["Select", "Line", "Polyline", "Circle", "Rectangle", "Text", "Dimension"];
+    public IReadOnlyList<string> DrawingTools { get; } = ["Select", "Line", "Polyline", "Circle", "Rectangle", "Text", "Dimension"];
+    public IReadOnlyList<string> ModifyTools { get; } = ["Move", "Copy", "Rotate", "Scale"];
 
     [ObservableProperty] public partial ProjectTabViewModel? SelectedProjectTab { get; set; }
     [ObservableProperty] public partial DrawingTabViewModel? SelectedDrawingTab { get; set; }
@@ -117,6 +118,28 @@ public partial class MainViewModel : ViewModelBase
         StatusText = SelectedEntityCount == 0 ? "No selection" : $"{SelectedEntityCount} selected";
     }
 
+    public void ApplyTransform(EntityTransformKind kind, IEnumerable<Guid> entityIds, CadPoint reference, CadPoint target)
+    {
+        if (ActiveDrawing is null) return;
+        var count = kind switch
+        {
+            EntityTransformKind.Move => _editJournal.Move(ActiveDrawing, entityIds, reference, target),
+            EntityTransformKind.Copy => _editJournal.Copy(ActiveDrawing, entityIds, reference, target),
+            EntityTransformKind.Rotate => _editJournal.Rotate(ActiveDrawing, entityIds, reference, target),
+            EntityTransformKind.Scale => _editJournal.Scale(ActiveDrawing, entityIds, reference, target),
+            _ => 0
+        };
+        if (count == 0)
+        {
+            StatusText = "Transform needs editable entities and two distinct reference points";
+            return;
+        }
+
+        ActiveTool = "Select";
+        ResetSelection();
+        NotifyDrawingChanged($"{PastTense(kind)} {count} {(count == 1 ? "entity" : "entities")}");
+    }
+
     [RelayCommand]
     private async Task SaveAsync()
     {
@@ -134,8 +157,22 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void SelectTool(string? tool)
     {
-        if (!string.IsNullOrWhiteSpace(tool)) ActiveTool = tool;
-        StatusText = ActiveTool == "Select" ? "Select entities" : $"{ActiveTool}: click in the viewport to draw";
+        if (string.IsNullOrWhiteSpace(tool)) return;
+        if (Enum.TryParse<EntityTransformKind>(tool, out _) && _selectedEntityIds.Count == 0)
+        {
+            ActiveTool = "Select";
+            StatusText = $"Select one or more editable entities before choosing {tool}";
+            return;
+        }
+
+        ActiveTool = tool;
+        StatusText = ActiveTool switch
+        {
+            "Select" => "Select entities",
+            "Move" or "Copy" => $"{ActiveTool}: choose a base point, then a target point",
+            "Rotate" or "Scale" => $"{ActiveTool}: choose reference and target points around the selection center",
+            _ => $"{ActiveTool}: click in the viewport to draw"
+        };
     }
 
     [RelayCommand(CanExecute = nameof(CanErase))]
@@ -245,6 +282,15 @@ public partial class MainViewModel : ViewModelBase
         SelectedEntityCount = 0;
         EraseCommand.NotifyCanExecuteChanged();
     }
+
+    private static string PastTense(EntityTransformKind kind) => kind switch
+    {
+        EntityTransformKind.Move => "Moved",
+        EntityTransformKind.Copy => "Copied",
+        EntityTransformKind.Rotate => "Rotated",
+        EntityTransformKind.Scale => "Scaled",
+        _ => "Transformed"
+    };
 
     private Task OpenWorkspaceAsync(ProjectWorkspace workspace)
     {

@@ -13,11 +13,11 @@ DatumForge.Infrastructure → DatumForge.Core
 DatumForge.Tests → Core + Infrastructure
 ```
 
-`Core` contains drawing entities, layers, layouts, project settings, and the policy used when a drawing is opened outside its project. It has no UI or storage dependencies.
+`Core` contains drawing entities, layers, layouts, project settings, geometry hit testing, transform math, the per-drawing edit journal, and the policy used when a drawing is opened outside its project. It has no UI or storage dependencies.
 
 `Infrastructure` serializes versioned JSON documents, resolves drawing references only inside the project root, writes through a temporary file before replacement, and snapshots the previous revision before each save.
 
-`App` uses MVVM for workspace state. `DrawingViewport` is the rendering and pointer-input boundary; it transforms model coordinates into device coordinates and renders only visible layers. More advanced geometry operations should move into `Core` services rather than accumulating in the control.
+`App` uses MVVM for workspace state. `DrawingViewport` is the rendering and pointer-input boundary; it transforms model coordinates into device coordinates, collects transform reference points, and renders only visible layers. Geometry mutation and reversible edit state remain in `Core` rather than accumulating in the control.
 
 ## Important boundaries
 

@@ -14,6 +14,7 @@ public sealed class DrawingViewport : Control
     public event EventHandler? DeleteRequested;
     public event EventHandler? UndoRequested;
     public event EventHandler? RedoRequested;
+    public event EventHandler<EntityTransformRequestedEventArgs>? TransformRequested;
 
     public static readonly StyledProperty<DrawingDocument?> DrawingProperty =
         AvaloniaProperty.Register<DrawingViewport, DrawingDocument?>(nameof(Drawing));
@@ -32,6 +33,7 @@ public sealed class DrawingViewport : Control
         AffectsRender<DrawingViewport>(DrawingProperty, LayoutProperty, ActiveToolProperty, RevisionTokenProperty);
         DrawingProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.ClearSelection());
         RevisionTokenProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.ClearSelection());
+        ActiveToolProperty.Changed.AddClassHandler<DrawingViewport>((control, _) => control.ResetInteraction());
     }
 
     public DrawingDocument? Drawing { get => GetValue(DrawingProperty); set => SetValue(DrawingProperty, value); }
@@ -52,6 +54,15 @@ public sealed class DrawingViewport : Control
             var layer = Drawing.Layers.FirstOrDefault(item => item.Id == entity.LayerId);
             if (layer is null || !layer.IsVisible) continue;
             DrawEntity(context, entity, layer, _selectedEntityIds.Contains(entity.Id));
+        }
+
+        if (_anchor is { } anchor)
+        {
+            var marker = ToScreen(anchor);
+            var markerPen = new Pen(new SolidColorBrush(Color.Parse("#F4B95E")), 1.5);
+            context.DrawEllipse(null, markerPen, new Rect(marker.X - 5, marker.Y - 5, 10, 10));
+            context.DrawLine(markerPen, new Point(marker.X - 8, marker.Y), new Point(marker.X + 8, marker.Y));
+            context.DrawLine(markerPen, new Point(marker.X, marker.Y - 8), new Point(marker.X, marker.Y + 8));
         }
 
         var origin = ToScreen(new CadPoint(0, 0));
@@ -76,6 +87,12 @@ public sealed class DrawingViewport : Control
             point = new CadPoint(
                 Math.Round(point.X / Layout.GridSpacing) * Layout.GridSpacing,
                 Math.Round(point.Y / Layout.GridSpacing) * Layout.GridSpacing);
+        }
+
+        if (Enum.TryParse<EntityTransformKind>(ActiveTool, out var transformKind))
+        {
+            RequestTransform(transformKind, point);
+            return;
         }
 
         if (ActiveTool == "Text")
@@ -139,6 +156,29 @@ public sealed class DrawingViewport : Control
         if (_selectedEntityIds.Count == 0) return;
         _selectedEntityIds.Clear();
         SelectionChanged?.Invoke(this, new EntitySelectionChangedEventArgs([]));
+        InvalidateVisual();
+    }
+
+    private void ResetInteraction()
+    {
+        _anchor = null;
+        InvalidateVisual();
+    }
+
+    private void RequestTransform(EntityTransformKind kind, CadPoint point)
+    {
+        if (_selectedEntityIds.Count == 0) return;
+        if (_anchor is null)
+        {
+            _anchor = point;
+            InvalidateVisual();
+            return;
+        }
+
+        var reference = _anchor.Value;
+        _anchor = null;
+        TransformRequested?.Invoke(this, new EntityTransformRequestedEventArgs(
+            kind, [.. _selectedEntityIds], reference, point));
         InvalidateVisual();
     }
 
@@ -256,4 +296,16 @@ public sealed class EntityCreatedEventArgs(DrawingEntity entity) : EventArgs
 public sealed class EntitySelectionChangedEventArgs(IReadOnlyCollection<Guid> entityIds) : EventArgs
 {
     public IReadOnlyCollection<Guid> EntityIds { get; } = entityIds;
+}
+
+public sealed class EntityTransformRequestedEventArgs(
+    EntityTransformKind kind,
+    IReadOnlyCollection<Guid> entityIds,
+    CadPoint reference,
+    CadPoint target) : EventArgs
+{
+    public EntityTransformKind Kind { get; } = kind;
+    public IReadOnlyCollection<Guid> EntityIds { get; } = entityIds;
+    public CadPoint Reference { get; } = reference;
+    public CadPoint Target { get; } = target;
 }

@@ -14,40 +14,53 @@
     <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
         <!-- Application ribbon -->
         <Border Grid.Row="0" Background="#11171C" BorderBrush="#2A333B" BorderThickness="0,0,0,1" Padding="12,8">
-            <Grid ColumnDefinitions="Auto,16,Auto,1,Auto,1,Auto,*">
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
-                    <Border Width="30" Height="30" CornerRadius="7" Background="#27A879">
-                        <TextBlock Text="D" FontWeight="Bold" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <StackPanel>
-                        <TextBlock Text="DATUMFORGE" FontWeight="SemiBold" FontSize="14" />
-                        <TextBlock Text="Precision drawing workspace" Foreground="#7F919E" FontSize="10" />
+            <Grid RowDefinitions="Auto,Auto">
+                <Grid ColumnDefinitions="Auto,16,Auto,1,Auto,*">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+                        <Border Width="30" Height="30" CornerRadius="7" Background="#27A879">
+                            <TextBlock Text="D" FontWeight="Bold" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel>
+                            <TextBlock Text="DATUMFORGE" FontWeight="SemiBold" FontSize="14" />
+                            <TextBlock Text="Precision drawing workspace" Foreground="#7F919E" FontSize="10" />
+                        </StackPanel>
                     </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3">
+                        <Button Classes="tool" Content="＋ New" Click="NewProject_OnClick" />
+                        <Button Classes="tool" Content="⌁ Open project" Click="OpenProject_OnClick" />
+                        <Button Classes="tool" Content="Open drawing" Click="OpenDrawing_OnClick" />
+                        <Button Classes="tool" Content="Save" Command="{Binding SaveCommand}" />
+                    </StackPanel>
+                    <Border Grid.Column="3" Width="1" Background="#303A43" Margin="12,2" />
+                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="3">
+                        <Button Classes="tool" Content="Undo" Command="{Binding UndoCommand}" ToolTip.Tip="Undo (Ctrl+Z)" />
+                        <Button Classes="tool" Content="Redo" Command="{Binding RedoCommand}" ToolTip.Tip="Redo (Ctrl+Y)" />
+                        <Button Classes="tool" Content="Erase" Command="{Binding EraseCommand}" ToolTip.Tip="Erase selected entities (Delete)" />
+                        <Button Classes="tool" Content="＋ Layer" Command="{Binding AddLayerCommand}" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="5" Text="{Binding ActiveTool, StringFormat='ACTIVE · {0}'}" Foreground="#67D6AD" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="16,0" />
+                </Grid>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="7" Margin="0,7,0,0">
+                    <TextBlock Text="DRAW" FontSize="9" FontWeight="Bold" Foreground="#71838F" VerticalAlignment="Center" />
+                    <ItemsControl ItemsSource="{Binding DrawingTools}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Classes="tool" Content="{Binding .}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectToolCommand}" CommandParameter="{Binding .}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Border Width="1" Background="#303A43" Margin="8,2" />
+                    <TextBlock Text="MODIFY" FontSize="9" FontWeight="Bold" Foreground="#71838F" VerticalAlignment="Center" />
+                    <ItemsControl ItemsSource="{Binding ModifyTools}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Classes="tool" Content="{Binding .}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectToolCommand}" CommandParameter="{Binding .}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3">
-                    <Button Classes="tool" Content="＋ New" Click="NewProject_OnClick" />
-                    <Button Classes="tool" Content="⌁ Open project" Click="OpenProject_OnClick" />
-                    <Button Classes="tool" Content="Open drawing" Click="OpenDrawing_OnClick" />
-                    <Button Classes="tool" Content="Save" Command="{Binding SaveCommand}" />
-                </StackPanel>
-                <Border Grid.Column="3" Width="1" Background="#303A43" Margin="12,2" />
-                <ItemsControl Grid.Column="4" ItemsSource="{Binding Tools}">
-                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Button Classes="tool" Content="{Binding .}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectToolCommand}" CommandParameter="{Binding .}" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <Border Grid.Column="5" Width="1" Background="#303A43" Margin="12,2" />
-                <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="3">
-                    <Button Classes="tool" Content="Undo" Command="{Binding UndoCommand}" ToolTip.Tip="Undo (Ctrl+Z)" />
-                    <Button Classes="tool" Content="Redo" Command="{Binding RedoCommand}" ToolTip.Tip="Redo (Ctrl+Y)" />
-                    <Button Classes="tool" Content="Erase" Command="{Binding EraseCommand}" ToolTip.Tip="Erase selected entities (Delete)" />
-                    <Button Classes="tool" Content="＋ Layer" Command="{Binding AddLayerCommand}" />
-                    <Button Classes="tool" Content="Properties" />
-                </StackPanel>
-                <TextBlock Grid.Column="7" Text="{Binding ActiveTool, StringFormat='ACTIVE · {0}'}" Foreground="#67D6AD" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="16,0" />
             </Grid>
         </Border>
 
@@ -150,6 +163,7 @@
                                               DeleteRequested="Viewport_OnDeleteRequested"
                                               UndoRequested="Viewport_OnUndoRequested"
                                               RedoRequested="Viewport_OnRedoRequested"
+                                              TransformRequested="Viewport_OnTransformRequested"
                                               Focusable="True" />
                 </Border>
 

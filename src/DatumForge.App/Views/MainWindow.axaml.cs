@@ -20,6 +20,8 @@ public partial class MainWindow : Window
     private void Viewport_OnDeleteRequested(object? sender, EventArgs e) => ViewModel.EraseCommand.Execute(null);
     private void Viewport_OnUndoRequested(object? sender, EventArgs e) => ViewModel.UndoCommand.Execute(null);
     private void Viewport_OnRedoRequested(object? sender, EventArgs e) => ViewModel.RedoCommand.Execute(null);
+    private void Viewport_OnTransformRequested(object? sender, EntityTransformRequestedEventArgs e) =>
+        ViewModel.ApplyTransform(e.Kind, e.EntityIds, e.Reference, e.Target);
 
     private async void NewProject_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
