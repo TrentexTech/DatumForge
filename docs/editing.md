@@ -34,6 +34,8 @@ Before the first click, the viewport marks the resolved insertion or reference p
 
 The **Arc** tool creates a circular arc from three points: start, a point that the arc passes through, and end. A live circular preview appears after the second point. Three collinear points are rejected because they do not define a circle.
 
+The **Polyline** tool keeps accepting vertices and previews both its committed segments and the pending segment. Press **Enter**, double-click the final vertex, or right-click to finish the polyline. Press **Escape** to discard the unfinished polyline. A polyline requires at least two distinct vertices.
+
 ## Command and coordinate entry
 
 The narrow command bar below the viewport accepts tool names and precise points. Press **Enter** or click the arrow button to submit an entry.
@@ -42,17 +44,19 @@ The narrow command bar below the viewport accepts tool names and precise points.
 - Relative Cartesian point: `@25,-10`
 - Relative polar point: `@50<30` (distance 50 at 30 degrees)
 
-Relative points use the active tool's first point as their origin. Typed coordinates are exact and therefore do not pass through grid or object snapping.
+Relative points use the active tool's current reference point as their origin—the previous vertex while drawing a polyline. Typed coordinates are exact and therefore do not pass through grid or object snapping.
+
+For a polyline, submit each vertex as a coordinate and then submit an empty command line to finish it.
 
 Commands include `select` (`sel`), `line` (`l`), `polyline` (`pl`), `circle` (`c`), `arc` (`a`), `rectangle` (`rect`), `text` (`t`), `dimension` (`dim`), `move` (`m`), `copy` (`co`), `rotate` (`ro`), `scale` (`sc`), `erase` (`e`), `undo` (`u`), `redo`, `grid`, `ortho`, `polar`, `snap`, and `osnap`.
 
 ## Orthographic tracking
 
-Press **F8**, use the **Ortho** view control, or enter `ortho` to constrain pointer input to the dominant horizontal or vertical axis from the active tool's first point. Exact object snaps take precedence over orthographic tracking; otherwise grid snapping is applied before the axis constraint. Typed coordinates remain exact and are not constrained.
+Press **F8**, use the **Ortho** view control, or enter `ortho` to constrain pointer input to the dominant horizontal or vertical axis from the active tool's current reference point. Exact object snaps take precedence over orthographic tracking; otherwise grid snapping is applied before the axis constraint. Typed coordinates remain exact and are not constrained.
 
 ## Polar tracking
 
-Press **F10**, use the **Polar** view control, or enter `polar` to constrain pointer input to the nearest 45-degree angle from the active tool's first point. Ortho and Polar are mutually exclusive. Exact object snaps take precedence; otherwise grid snapping is applied before the angle constraint. Typed coordinates remain exact and are not constrained.
+Press **F10**, use the **Polar** view control, or enter `polar` to constrain pointer input to the nearest 45-degree angle from the active tool's current reference point. Ortho and Polar are mutually exclusive. Exact object snaps take precedence; otherwise grid snapping is applied before the angle constraint. Typed coordinates remain exact and are not constrained.
 
 ## Object snaps
 

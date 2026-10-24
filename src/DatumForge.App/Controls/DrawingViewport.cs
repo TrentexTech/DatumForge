@@ -9,7 +9,7 @@ namespace DatumForge.App.Controls;
 
 public sealed class DrawingViewport : Control
 {
-    private static readonly Cursor PanningCursor = new(StandardCursorType.Hand);
+    private static Cursor? _panningCursor;
 
     public event EventHandler<EntityCreatedEventArgs>? EntityCreated;
     public event EventHandler<EntitySelectionChangedEventArgs>? SelectionChanged;
@@ -30,6 +30,7 @@ public sealed class DrawingViewport : Control
     private CadPoint? _anchor;
     private CadPoint? _arcStart;
     private CadPoint? _arcThrough;
+    private readonly PolylineConstruction _polyline = new();
     private CadPoint? _previewPoint;
     private ObjectSnapResult? _snapResult;
     private Guid? _hoveredEntityId;
@@ -72,7 +73,9 @@ public sealed class DrawingViewport : Control
                 _hoveredEntityId == entity.Id);
         }
 
-        if (_anchor is { } previewAnchor && _previewPoint is { } previewPoint)
+        if (ActiveTool == "Polyline" && _polyline.IsActive)
+            DrawPolylinePreview(context);
+        else if (_anchor is { } previewAnchor && _previewPoint is { } previewPoint)
             DrawInteractionPreview(context, previewAnchor, previewPoint);
         else if (_previewPoint is { } firstPoint)
             DrawFirstPointPreview(context, firstPoint);
@@ -105,7 +108,7 @@ public sealed class DrawingViewport : Control
             _hoveredEntityId = null;
             _lastPanPosition = e.GetPosition(this);
             _panChangeReported = false;
-            Cursor = PanningCursor;
+            Cursor = _panningCursor ??= new Cursor(StandardCursorType.Hand);
             InvalidateVisual();
             e.Pointer.Capture(this);
             e.Handled = true;
@@ -113,10 +116,27 @@ public sealed class DrawingViewport : Control
         }
 
         if (Drawing is null) return;
+        var properties = e.GetCurrentPoint(this).Properties;
         var point = ToWorld(e.GetPosition(this));
         if (ActiveTool == "Select")
         {
+            if (!properties.IsLeftButtonPressed) return;
             SelectAt(point, e.KeyModifiers);
+            return;
+        }
+
+        if (ActiveTool == "Polyline" && properties.IsRightButtonPressed)
+        {
+            FinishPolyline();
+            e.Handled = true;
+            return;
+        }
+
+        if (!properties.IsLeftButtonPressed) return;
+        if (ActiveTool == "Polyline" && e.ClickCount > 1)
+        {
+            FinishPolyline();
+            e.Handled = true;
             return;
         }
 
@@ -227,6 +247,12 @@ public sealed class DrawingViewport : Control
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+        if (e.Key == Key.Enter && ActiveTool == "Polyline" && _polyline.IsActive)
+        {
+            FinishPolyline();
+            e.Handled = true;
+            return;
+        }
         if (e.Key == Key.Escape && HandleEscape()) e.Handled = true;
     }
 
@@ -266,6 +292,7 @@ public sealed class DrawingViewport : Control
     {
         if (Drawing is null) return CoordinateSubmissionResult.Failure("Open a drawing before entering coordinates.");
         if (ActiveTool == "Select") return CoordinateSubmissionResult.Failure("Choose a drawing or modify tool before entering coordinates.");
+        if (ActiveTool == "Polyline" && string.IsNullOrWhiteSpace(input)) return FinishPolyline();
         if (!CoordinateParser.TryResolve(input, _anchor, out var point, out var error))
             return CoordinateSubmissionResult.Failure(error);
 
@@ -279,6 +306,7 @@ public sealed class DrawingViewport : Control
         _anchor = null;
         _arcStart = null;
         _arcThrough = null;
+        _polyline.Reset();
         _previewPoint = null;
         _snapResult = null;
         _hoveredEntityId = null;
@@ -367,6 +395,7 @@ public sealed class DrawingViewport : Control
                 : CoordinateSubmissionResult.Failure("No visible, unlocked layer is available.");
 
         if (ActiveTool == "Arc") return ProcessArcPoint(point);
+        if (ActiveTool == "Polyline") return ProcessPolylinePoint(point);
 
         if (_anchor is null)
         {
@@ -383,13 +412,37 @@ public sealed class DrawingViewport : Control
         {
             "Circle" => EntityKind.Circle,
             "Rectangle" => EntityKind.Rectangle,
-            "Polyline" => EntityKind.Polyline,
             "Dimension" => EntityKind.Dimension,
             _ => EntityKind.Line
         };
         var radius = Math.Sqrt(Math.Pow(point.X - first.X, 2) + Math.Pow(point.Y - first.Y, 2));
         return AddEntity(kind, [first, point], radius, null)
             ? CoordinateSubmissionResult.CompletedInput($"{kind} created.")
+            : CoordinateSubmissionResult.Failure("No visible, unlocked layer is available.");
+    }
+
+    private CoordinateSubmissionResult ProcessPolylinePoint(CadPoint point)
+    {
+        if (!_polyline.TryAddVertex(point))
+            return CoordinateSubmissionResult.Failure("Choose a point different from the previous polyline vertex.");
+
+        _anchor = point;
+        _previewPoint = point;
+        InvalidateVisual();
+        return CoordinateSubmissionResult.Accepted(
+            $"Polyline vertex {_polyline.Vertices.Count} set to {FormatPoint(point)}; add another point or press Enter to finish.");
+    }
+
+    private CoordinateSubmissionResult FinishPolyline()
+    {
+        if (!_polyline.TryComplete(out var points))
+            return CoordinateSubmissionResult.Failure("A polyline needs at least two distinct vertices.");
+
+        _anchor = null;
+        _previewPoint = null;
+        _snapResult = null;
+        return AddEntity(EntityKind.Polyline, points, 0, null)
+            ? CoordinateSubmissionResult.CompletedInput($"Polyline created with {points.Count} vertices.")
             : CoordinateSubmissionResult.Failure("No visible, unlocked layer is available.");
     }
 
@@ -561,7 +614,6 @@ public sealed class DrawingViewport : Control
                 context.DrawRectangle(null, pen, new Rect(first, second));
                 break;
             case "Line":
-            case "Polyline":
             case "Dimension":
             case "Move":
             case "Copy":
@@ -574,6 +626,24 @@ public sealed class DrawingViewport : Control
         }
 
         context.DrawEllipse(brush, null, new Rect(second.X - 3, second.Y - 3, 6, 6));
+    }
+
+    private void DrawPolylinePreview(DrawingContext context)
+    {
+        var brush = new SolidColorBrush(Color.Parse("#67D6AD")) { Opacity = 0.8 };
+        var pen = new Pen(brush, 1.5, dashStyle: new DashStyle([6, 4], 0));
+        var vertices = _polyline.Vertices;
+        for (var index = 1; index < vertices.Count; index++)
+            context.DrawLine(pen, ToScreen(vertices[index - 1]), ToScreen(vertices[index]));
+
+        var anchor = ToScreen(vertices[^1]);
+        DrawAlignmentGuides(context, anchor, false, 0.4);
+        if (_previewPoint is not { } preview || preview == vertices[^1]) return;
+
+        var target = ToScreen(preview);
+        DrawAlignmentGuides(context, target, false, 0.75);
+        context.DrawLine(pen, anchor, target);
+        context.DrawEllipse(brush, null, new Rect(target.X - 3, target.Y - 3, 6, 6));
     }
 
     private void DrawFirstPointPreview(DrawingContext context, CadPoint point)

@@ -53,6 +53,24 @@ public sealed class ObjectSnapperTests
     }
 
     [Fact]
+    public void FindsPolylineVerticesAndSegmentMidpoints()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        drawing.Entities.Add(new DrawingEntity
+        {
+            Kind = EntityKind.Polyline,
+            LayerId = layer.Id,
+            Points = [new(0, 0), new(10, 0), new(10, 10)]
+        });
+
+        var vertex = ObjectSnapper.FindNearest(drawing, new(10.2, 0.1), 1, ObjectSnapMode.Endpoint);
+        var midpoint = ObjectSnapper.FindNearest(drawing, new(10.2, 5.1), 1, ObjectSnapMode.Midpoint);
+
+        Assert.Equal(new CadPoint(10, 0), vertex?.Point);
+        Assert.Equal(new CadPoint(10, 5), midpoint?.Point);
+    }
+
+    [Fact]
     public void FindsCircleAndRectangleCenters()
     {
         var drawing = DrawingWithLayer(out var layer);

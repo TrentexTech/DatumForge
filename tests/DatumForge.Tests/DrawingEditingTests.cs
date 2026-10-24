@@ -53,6 +53,22 @@ public sealed class EntityHitTesterTests
         Assert.Null(EntityHitTester.HitTest(drawing, new(0, -5), 0.5));
     }
 
+    [Fact]
+    public void HitTestFindsEveryPolylineSegment()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        var polyline = new DrawingEntity
+        {
+            Kind = EntityKind.Polyline,
+            LayerId = layer.Id,
+            Points = [new(0, 0), new(10, 0), new(10, 10)]
+        };
+        drawing.Entities.Add(polyline);
+
+        Assert.Same(polyline, EntityHitTester.HitTest(drawing, new(5, 0.2), 0.5));
+        Assert.Same(polyline, EntityHitTester.HitTest(drawing, new(9.8, 7), 0.5));
+    }
+
     private static DrawingDocument DrawingWithLayer(out DrawingLayer layer)
     {
         layer = new DrawingLayer();
