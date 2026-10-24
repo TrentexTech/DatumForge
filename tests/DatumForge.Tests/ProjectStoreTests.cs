@@ -120,6 +120,24 @@ public sealed class ProjectStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task ProjectFilesDoNotPersistLocalViewportPosition()
+    {
+        var workspace = await _store.CreateAsync(_directory, "LocalView");
+        var layout = Assert.Single(workspace.Project.Layouts);
+        layout.Zoom = 3.5;
+        layout.Pan = new CadPoint(120, -45);
+
+        await _store.SaveAsync(workspace);
+
+        var json = await File.ReadAllTextAsync(workspace.ProjectFilePath);
+        Assert.DoesNotContain("\"zoom\"", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("\"pan\"", json, StringComparison.OrdinalIgnoreCase);
+        var loaded = await _store.LoadProjectAsync(workspace.ProjectFilePath);
+        Assert.Equal(1, Assert.Single(loaded.Project.Layouts).Zoom);
+        Assert.Equal(default, Assert.Single(loaded.Project.Layouts).Pan);
+    }
+
+    [Fact]
     public async Task StandaloneDrawingCanBeSavedDirectly()
     {
         var path = Path.Combine(_directory, "Standalone.dfdraw");

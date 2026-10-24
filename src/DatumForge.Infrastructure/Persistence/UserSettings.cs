@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using DatumForge.Core.Editing;
+using DatumForge.Core.Models;
 
 namespace DatumForge.Infrastructure.Persistence;
 
@@ -12,6 +14,7 @@ public sealed class UserSettings
     public Dictionary<string, string> KeyBindings { get; set; } = KeyBindingDefaults.Create();
     public List<RecentFileEntry> RecentProjects { get; set; } = [];
     public List<RecentFileEntry> RecentDrawings { get; set; } = [];
+    public Dictionary<Guid, ProjectViewSettings> ProjectViews { get; set; } = [];
 
     public void RememberProject(string path, string? displayName = null) =>
         Remember(RecentProjects, path, displayName, Preferences.RecentItemLimit);
@@ -23,6 +26,37 @@ public sealed class UserSettings
 
     public bool ForgetDrawing(string path) => Forget(RecentDrawings, path);
 
+    public void RememberProjectView(Guid projectId, Guid layoutId, double zoom, CadPoint pan)
+    {
+        if (projectId == Guid.Empty || layoutId == Guid.Empty) return;
+        if (!ProjectViews.TryGetValue(projectId, out var projectView))
+        {
+            projectView = new ProjectViewSettings();
+            ProjectViews[projectId] = projectView;
+        }
+
+        projectView.Layouts[layoutId] = new LayoutViewSettings
+        {
+            Zoom = Math.Clamp(zoom, ViewportNavigation.MinimumZoom, ViewportNavigation.MaximumZoom),
+            PanX = double.IsFinite(pan.X) ? pan.X : 0,
+            PanY = double.IsFinite(pan.Y) ? pan.Y : 0,
+            UpdatedAtUtc = DateTimeOffset.UtcNow
+        };
+    }
+
+    public bool TryGetProjectView(Guid projectId, Guid layoutId, out LayoutViewSettings view)
+    {
+        if (ProjectViews.TryGetValue(projectId, out var projectView) &&
+            projectView.Layouts.TryGetValue(layoutId, out var storedView))
+        {
+            view = storedView;
+            return true;
+        }
+
+        view = null!;
+        return false;
+    }
+
     public void Normalize()
     {
         Preferences ??= new UserPreferences();
@@ -30,6 +64,7 @@ public sealed class UserSettings
         KeyBindings ??= [];
         RecentProjects ??= [];
         RecentDrawings ??= [];
+        ProjectViews ??= [];
         foreach (var binding in KeyBindingDefaults.Values)
             KeyBindings.TryAdd(binding.Key, binding.Value);
         foreach (var key in KeyBindings.Keys.ToArray())
@@ -37,6 +72,27 @@ public sealed class UserSettings
         Preferences.RecentItemLimit = Math.Clamp(Preferences.RecentItemLimit, 1, 50);
         NormalizeRecents(RecentProjects, Preferences.RecentItemLimit);
         NormalizeRecents(RecentDrawings, Preferences.RecentItemLimit);
+        foreach (var projectId in ProjectViews.Keys.ToArray())
+        {
+            if (projectId == Guid.Empty || ProjectViews[projectId] is null)
+            {
+                ProjectViews.Remove(projectId);
+                continue;
+            }
+
+            var projectView = ProjectViews[projectId];
+            projectView.Layouts ??= [];
+            foreach (var layoutId in projectView.Layouts.Keys.ToArray())
+            {
+                if (layoutId == Guid.Empty || projectView.Layouts[layoutId] is null)
+                {
+                    projectView.Layouts.Remove(layoutId);
+                    continue;
+                }
+
+                projectView.Layouts[layoutId].Normalize();
+            }
+        }
     }
 
     private static void Remember(List<RecentFileEntry> entries, string path, string? displayName, int limit)
@@ -153,6 +209,31 @@ public sealed class WindowSettings
     public double Width { get; set; } = 1440;
     public double Height { get; set; } = 900;
     public bool IsMaximized { get; set; }
+}
+
+public sealed class ProjectViewSettings
+{
+    public Dictionary<Guid, LayoutViewSettings> Layouts { get; set; } = [];
+}
+
+public sealed class LayoutViewSettings
+{
+    public double Zoom { get; set; } = 1;
+    public double PanX { get; set; }
+    public double PanY { get; set; }
+    public DateTimeOffset UpdatedAtUtc { get; set; }
+
+    [JsonIgnore]
+    public CadPoint Pan => new(PanX, PanY);
+
+    public void Normalize()
+    {
+        Zoom = double.IsFinite(Zoom)
+            ? Math.Clamp(Zoom, ViewportNavigation.MinimumZoom, ViewportNavigation.MaximumZoom)
+            : 1;
+        if (!double.IsFinite(PanX)) PanX = 0;
+        if (!double.IsFinite(PanY)) PanY = 0;
+    }
 }
 
 public sealed class RecentFileEntry

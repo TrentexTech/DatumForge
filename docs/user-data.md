@@ -14,6 +14,7 @@ The settings document is versioned JSON and currently stores:
 - the last normal window size and whether the window was maximized;
 - remappable keyboard shortcut assignments;
 - recently opened projects and standalone drawings, including their paths, display names, and last-opened timestamps.
+- per-project, per-layout viewport pan and zoom positions.
 
 Open the gear button in the DatumForge title bar and choose **Keybinds** to remap a command, clear an assignment, or restore the defaults. Saved changes take effect immediately and are reused in later sessions.
 

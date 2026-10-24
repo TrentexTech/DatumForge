@@ -1,11 +1,18 @@
 using Avalonia.Controls;
+using Avalonia.Threading;
 using DatumForge.App.ViewModels;
 
 namespace DatumForge.App.Controls;
 
 public partial class ViewportModuleView : UserControl
 {
-    public ViewportModuleView() => InitializeComponent();
+    private readonly DispatcherTimer _viewSettingsSaveTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
+
+    public ViewportModuleView()
+    {
+        InitializeComponent();
+        _viewSettingsSaveTimer.Tick += ViewSettingsSaveTimer_OnTick;
+    }
 
     public ViewportModuleItemViewModel? ViewModel => DataContext as ViewportModuleItemViewModel;
 
@@ -18,4 +25,19 @@ public partial class ViewportModuleView : UserControl
 
     private void Viewport_OnTransformRequested(object? sender, EntityTransformRequestedEventArgs e) =>
         ViewModel?.Owner.ApplyTransform(e.Kind, e.EntityIds, e.Reference, e.Target);
+
+    private void Viewport_OnViewChanged(object? sender, EventArgs e)
+    {
+        ViewModel?.Owner.NotifyViewportChanged();
+        _viewSettingsSaveTimer.Stop();
+        _viewSettingsSaveTimer.Start();
+    }
+
+    private void ViewSettingsSaveTimer_OnTick(object? sender, EventArgs e)
+    {
+        _viewSettingsSaveTimer.Stop();
+        if (ViewModel?.Owner is not { } owner) return;
+        try { owner.SaveUserSettings(); }
+        catch (Exception exception) { owner.StatusText = $"Could not save viewport settings: {exception.Message}"; }
+    }
 }

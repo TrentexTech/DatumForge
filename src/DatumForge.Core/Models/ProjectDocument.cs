@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace DatumForge.Core.Models;
 
 [Flags]
@@ -52,7 +54,9 @@ public sealed class LayoutDefinition
         ObjectSnapMode.Endpoint | ObjectSnapMode.Midpoint | ObjectSnapMode.Center | ObjectSnapMode.Intersection;
     public bool ShowLineWeights { get; set; } = true;
     public double GridSpacing { get; set; } = 25;
+    [JsonIgnore]
     public double Zoom { get; set; } = 1;
+    [JsonIgnore]
     public CadPoint Pan { get; set; }
     public List<ViewportModuleDefinition> ViewportModules { get; set; } = ViewportModuleDefinition.CreateDefault();
 

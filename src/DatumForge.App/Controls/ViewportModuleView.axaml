@@ -60,6 +60,7 @@
                                       EntityCreated="Viewport_OnEntityCreated"
                                       SelectionChanged="Viewport_OnSelectionChanged"
                                       TransformRequested="Viewport_OnTransformRequested"
+                                      ViewChanged="Viewport_OnViewChanged"
                                       Focusable="True" />
         </Border>
 

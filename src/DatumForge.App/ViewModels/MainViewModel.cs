@@ -313,6 +313,15 @@ public partial class MainViewModel : ViewModelBase
         if (!completed) StatusText = message;
     }
 
+    public void NotifyViewportChanged()
+    {
+        if (SelectedLayout is null) return;
+        if (SelectedProjectTab?.Workspace?.Project is { } project)
+            UserSettings.RememberProjectView(project.Id, SelectedLayout.Id, SelectedLayout.Zoom, SelectedLayout.Pan);
+        OnPropertyChanged(nameof(SelectedLayout));
+        StatusText = $"View updated · {SelectedLayout.Zoom:P0} zoom";
+    }
+
     public bool TryExecuteTextCommand(string? input)
     {
         var command = input?.Trim().ToLowerInvariant();
@@ -666,10 +675,22 @@ public partial class MainViewModel : ViewModelBase
             return Task.CompletedTask;
         }
 
+        RestoreProjectViews(workspace.Project);
+
         var tab = new ProjectTabViewModel(workspace.Project.Name, workspace);
         ProjectTabs.Add(tab);
         SelectedProjectTab = tab;
         return Task.CompletedTask;
+    }
+
+    private void RestoreProjectViews(ProjectDocument project)
+    {
+        foreach (var layout in project.Layouts)
+        {
+            if (!UserSettings.TryGetProjectView(project.Id, layout.Id, out var view)) continue;
+            layout.Zoom = view.Zoom;
+            layout.Pan = view.Pan;
+        }
     }
 
     private void RefreshWorkspace(ProjectWorkspace? workspace)

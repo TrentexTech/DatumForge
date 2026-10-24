@@ -9,9 +9,12 @@ namespace DatumForge.App.Controls;
 
 public sealed class DrawingViewport : Control
 {
+    private static readonly Cursor PanningCursor = new(StandardCursorType.Hand);
+
     public event EventHandler<EntityCreatedEventArgs>? EntityCreated;
     public event EventHandler<EntitySelectionChangedEventArgs>? SelectionChanged;
     public event EventHandler<EntityTransformRequestedEventArgs>? TransformRequested;
+    public event EventHandler? ViewChanged;
 
     public static readonly StyledProperty<DrawingDocument?> DrawingProperty =
         AvaloniaProperty.Register<DrawingViewport, DrawingDocument?>(nameof(Drawing));
@@ -25,6 +28,8 @@ public sealed class DrawingViewport : Control
     private CadPoint? _anchor;
     private ObjectSnapResult? _snapResult;
     private readonly HashSet<Guid> _selectedEntityIds = [];
+    private Point? _lastPanPosition;
+    private bool _panChangeReported;
 
     static DrawingViewport()
     {
@@ -74,6 +79,16 @@ public sealed class DrawingViewport : Control
     {
         base.OnPointerPressed(e);
         Focus();
+        if (Layout is not null && e.GetCurrentPoint(this).Properties.IsMiddleButtonPressed)
+        {
+            _lastPanPosition = e.GetPosition(this);
+            _panChangeReported = false;
+            Cursor = PanningCursor;
+            e.Pointer.Capture(this);
+            e.Handled = true;
+            return;
+        }
+
         if (Drawing is null) return;
         var point = ToWorld(e.GetPosition(this));
         if (ActiveTool == "Select")
@@ -89,6 +104,23 @@ public sealed class DrawingViewport : Control
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
+        if (_lastPanPosition is { } previous && Layout is not null)
+        {
+            var current = e.GetPosition(this);
+            var delta = current - previous;
+            _lastPanPosition = current;
+            if (delta.X != 0 || delta.Y != 0)
+            {
+                Layout.Pan = ViewportNavigation.PanByPixels(Layout.Pan, delta.X, delta.Y, Layout.Zoom);
+                _snapResult = null;
+                InvalidateVisual();
+                _panChangeReported = true;
+            }
+
+            e.Handled = true;
+            return;
+        }
+
         if (Drawing is null || ActiveTool == "Select" || Layout?.SnapToObjects != true)
         {
             if (_snapResult is null) return;
@@ -104,6 +136,54 @@ public sealed class DrawingViewport : Control
             12 / Math.Max(0.001, Layout.Zoom),
             Layout.ObjectSnaps);
         InvalidateVisual();
+    }
+
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        base.OnPointerReleased(e);
+        if (_lastPanPosition is null || e.InitialPressMouseButton != MouseButton.Middle) return;
+        var changed = EndPanning();
+        e.Pointer.Capture(null);
+        if (changed) ViewChanged?.Invoke(this, EventArgs.Empty);
+        e.Handled = true;
+    }
+
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        if (_lastPanPosition is null) return;
+        if (EndPanning()) ViewChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private bool EndPanning()
+    {
+        var changed = _panChangeReported;
+        _lastPanPosition = null;
+        _panChangeReported = false;
+        Cursor = null;
+        return changed;
+    }
+
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        base.OnPointerWheelChanged(e);
+        if (Layout is null || e.Delta.Y == 0) return;
+        var pointer = e.GetPosition(this);
+        var view = ViewportNavigation.ZoomAt(
+            Layout.Pan,
+            Layout.Zoom,
+            e.Delta.Y,
+            pointer.X,
+            pointer.Y,
+            Bounds.Width,
+            Bounds.Height);
+        if (view.Zoom == Layout.Zoom && view.Pan == Layout.Pan) return;
+        Layout.Zoom = view.Zoom;
+        Layout.Pan = view.Pan;
+        _snapResult = null;
+        InvalidateVisual();
+        ViewChanged?.Invoke(this, EventArgs.Empty);
+        e.Handled = true;
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

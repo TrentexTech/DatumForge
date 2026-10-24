@@ -1,4 +1,5 @@
 using DatumForge.Infrastructure.Persistence;
+using DatumForge.Core.Models;
 
 namespace DatumForge.Tests;
 
@@ -20,6 +21,9 @@ public sealed class UserSettingsStoreTests : IDisposable
         settings.KeyBindings[KeyBindingDefaults.Line] = "L";
         settings.RememberProject(Path.Combine(_directory, "Workshop.dfproj"), "Workshop");
         settings.RememberDrawing(Path.Combine(_directory, "Detail.dfdraw"), "Detail");
+        var projectId = Guid.NewGuid();
+        var layoutId = Guid.NewGuid();
+        settings.RememberProjectView(projectId, layoutId, 2.5, new CadPoint(12, -7));
 
         await store.SaveAsync(settings);
         var loaded = await store.LoadAsync();
@@ -33,6 +37,9 @@ public sealed class UserSettingsStoreTests : IDisposable
         Assert.Equal("L", loaded.KeyBindings[KeyBindingDefaults.Line]);
         Assert.Equal("Workshop", Assert.Single(loaded.RecentProjects).DisplayName);
         Assert.Equal("Detail", Assert.Single(loaded.RecentDrawings).DisplayName);
+        Assert.True(loaded.TryGetProjectView(projectId, layoutId, out var view));
+        Assert.Equal(2.5, view.Zoom);
+        Assert.Equal(new CadPoint(12, -7), view.Pan);
     }
 
     [Fact]

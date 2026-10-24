@@ -2,6 +2,13 @@
 
 DatumForge keeps viewport interaction separate from drawing mutations. The viewport collects selection and reference points; `DrawingEditJournal` applies each mutation to the active `DrawingDocument` and records enough state to reverse it.
 
+## View navigation
+
+- Drag with the **middle mouse button** to pan without changing the active drawing or modify tool.
+- Scroll the **mouse wheel** up to zoom in and down to zoom out.
+- Wheel zoom stays anchored to the drawing point beneath the pointer.
+- Pan and zoom are remembered per project and layout in the user's local DatumForge settings; they are not written to the portable project file.
+
 ## Selection
 
 - Click an entity with **Select** to replace the current selection.

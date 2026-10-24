@@ -122,6 +122,36 @@ public sealed class MainViewModelTests : IDisposable
         Assert.Equal("View", viewModel.SelectedRibbonTab);
     }
 
+    [Fact]
+    public async Task ViewportNavigationIsStoredInUserSettingsWithoutDirtyingProject()
+    {
+        var store = new ProjectStore();
+        var settingsStore = new UserSettingsStore(Path.Combine(_directory, "settings"));
+        var workspace = await store.CreateAsync(Path.Combine(_directory, "navigation"), "Navigation");
+        var projectId = workspace.Project.Id;
+        var layoutId = Assert.Single(workspace.Project.Layouts).Id;
+        var viewModel = new MainViewModel(store, settingsStore);
+        await viewModel.OpenProjectAsync(workspace.ProjectFilePath);
+        viewModel.SelectedLayout!.Zoom = 1.5;
+        viewModel.SelectedLayout.Pan = new CadPoint(20, -10);
+
+        viewModel.NotifyViewportChanged();
+        await viewModel.SaveUserSettingsAsync();
+
+        Assert.False(viewModel.HasUnsavedWork);
+        Assert.Contains("150", viewModel.StatusText, StringComparison.Ordinal);
+        Assert.EndsWith("zoom", viewModel.StatusText, StringComparison.Ordinal);
+        var savedSettings = await settingsStore.LoadAsync();
+        Assert.True(savedSettings.TryGetProjectView(projectId, layoutId, out var savedView));
+        Assert.Equal(1.5, savedView.Zoom);
+        Assert.Equal(new CadPoint(20, -10), savedView.Pan);
+
+        var reopened = new MainViewModel(store, settingsStore);
+        await reopened.OpenProjectAsync(workspace.ProjectFilePath);
+        Assert.Equal(1.5, reopened.SelectedLayout!.Zoom);
+        Assert.Equal(new CadPoint(20, -10), reopened.SelectedLayout.Pan);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);
