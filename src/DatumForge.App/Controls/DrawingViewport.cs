@@ -309,8 +309,10 @@ public sealed class DrawingViewport : Control
                 Math.Round(point.Y / Layout.GridSpacing) * Layout.GridSpacing);
         }
 
-        return Layout?.OrthographicTracking == true && _anchor is { } anchor
-            ? TrackingConstraints.ApplyOrthographic(anchor, point)
+        if (_anchor is not { } anchor) return point;
+        if (Layout?.OrthographicTracking == true) return TrackingConstraints.ApplyOrthographic(anchor, point);
+        return Layout?.PolarTracking == true
+            ? TrackingConstraints.ApplyPolar(anchor, point, Layout.PolarIncrementDegrees)
             : point;
     }
 

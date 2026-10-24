@@ -167,6 +167,24 @@ public sealed class MainViewModelTests : IDisposable
         Assert.True(viewModel.HasUnsavedWork);
     }
 
+    [Fact]
+    public async Task PolarAndOrthoTrackingAreMutuallyExclusive()
+    {
+        var store = new ProjectStore();
+        var workspace = await store.CreateAsync(Path.Combine(_directory, "polar"), "Polar");
+        var viewModel = new MainViewModel(store, new UserSettingsStore(Path.Combine(_directory, "settings")));
+        await viewModel.OpenProjectAsync(workspace.ProjectFilePath);
+
+        Assert.True(viewModel.TryExecuteTextCommand("ortho"));
+        Assert.True(viewModel.SelectedLayout!.OrthographicTracking);
+        Assert.True(viewModel.TryExecuteTextCommand("polar"));
+
+        Assert.True(viewModel.SelectedLayout.PolarTracking);
+        Assert.False(viewModel.SelectedLayout.OrthographicTracking);
+        Assert.Equal("Polar on", viewModel.PolarStatus);
+        Assert.True(viewModel.HasUnsavedWork);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);

@@ -127,4 +127,21 @@ public sealed class TrackingConstraintsTests
 
         Assert.Equal(new CadPoint(expectedX, expectedY), constrained);
     }
+
+    [Theory]
+    [InlineData(10, 2, 10.198039027185569, 0)]
+    [InlineData(2, 10, 0, 10.198039027185569)]
+    [InlineData(8, 7, 7.516648189186454, 7.516648189186453)]
+    [InlineData(8, -7, 7.516648189186454, -7.516648189186453)]
+    public void PolarTrackingLocksToNearestIncrement(
+        double targetX,
+        double targetY,
+        double expectedX,
+        double expectedY)
+    {
+        var constrained = TrackingConstraints.ApplyPolar(default, new CadPoint(targetX, targetY), 45);
+
+        Assert.Equal(expectedX, constrained.X, 10);
+        Assert.Equal(expectedY, constrained.Y, 10);
+    }
 }

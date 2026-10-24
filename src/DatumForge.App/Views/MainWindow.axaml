@@ -206,6 +206,7 @@
                                 <StackPanel Orientation="Horizontal" Spacing="1">
                                     <Button Classes="ribbon-command" Width="76" Command="{Binding ToggleGridCommand}" IsEnabled="{Binding IsWorkspaceVisible}" AutomationProperties.Name="Toggle grid"><StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="#" /><TextBlock Classes="ribbon-command-label" Text="{Binding GridStatus}" /></StackPanel></Button>
                                     <Button Classes="ribbon-command" Width="76" Command="{Binding ToggleOrthoCommand}" IsEnabled="{Binding IsWorkspaceVisible}" AutomationProperties.Name="Toggle orthographic tracking"><StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="└" /><TextBlock Classes="ribbon-command-label" Text="{Binding OrthoStatus}" /></StackPanel></Button>
+                                    <Button Classes="ribbon-command" Width="76" Command="{Binding TogglePolarCommand}" IsEnabled="{Binding IsWorkspaceVisible}" AutomationProperties.Name="Toggle polar tracking"><StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="∠" /><TextBlock Classes="ribbon-command-label" Text="{Binding PolarStatus}" /></StackPanel></Button>
                                     <Button Classes="ribbon-command" Width="90" Command="{Binding ToggleSnapCommand}" IsEnabled="{Binding IsWorkspaceVisible}" AutomationProperties.Name="Toggle grid snap"><StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="⌗" /><TextBlock Classes="ribbon-command-label" Text="{Binding SnapStatus}" /></StackPanel></Button>
                                     <Button Classes="ribbon-command" Width="100" Command="{Binding ToggleObjectSnapCommand}" IsEnabled="{Binding IsWorkspaceVisible}" AutomationProperties.Name="Toggle object snap"><StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="◎" /><TextBlock Classes="ribbon-command-label" Text="{Binding ObjectSnapStatus}" /></StackPanel></Button>
                                 </StackPanel>
@@ -396,6 +397,7 @@
                     <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4">
                         <Button Classes="tool" Content="{Binding GridStatus}" Command="{Binding ToggleGridCommand}" />
                         <Button Classes="tool" Content="{Binding OrthoStatus}" Command="{Binding ToggleOrthoCommand}" />
+                        <Button Classes="tool" Content="{Binding PolarStatus}" Command="{Binding TogglePolarCommand}" />
                         <Button Classes="tool" Content="{Binding SnapStatus}" Command="{Binding ToggleSnapCommand}" />
                         <Button Classes="tool" Content="{Binding ObjectSnapStatus}" Command="{Binding ToggleObjectSnapCommand}" />
                         <Border Width="1" Background="#334049" Margin="7,1" />

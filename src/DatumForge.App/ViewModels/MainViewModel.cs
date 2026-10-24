@@ -89,6 +89,7 @@ public partial class MainViewModel : ViewModelBase
     public string WindowTitle => SelectedProjectTab?.Workspace is { } workspace ? $"{workspace.Project.Name} — DatumForge" : "DatumForge";
     public string GridStatus => SelectedLayout?.ShowGrid == true ? "Grid on" : "Grid off";
     public string OrthoStatus => SelectedLayout?.OrthographicTracking == true ? "Ortho on" : "Ortho off";
+    public string PolarStatus => SelectedLayout?.PolarTracking == true ? "Polar on" : "Polar off";
     public string SnapStatus => SelectedLayout?.SnapToGrid == true ? "Grid snap on" : "Grid snap off";
     public string ObjectSnapStatus => SelectedLayout?.SnapToObjects == true ? "Object snap on" : "Object snap off";
     public string ToolStatus => $"TOOL: {ActiveTool.ToUpperInvariant()}";
@@ -375,6 +376,10 @@ public partial class MainViewModel : ViewModelBase
                 ToggleOrtho();
                 StatusText = OrthoStatus;
                 break;
+            case "polar":
+                TogglePolar();
+                StatusText = PolarStatus;
+                break;
             case "osnap":
                 ToggleObjectSnap();
                 StatusText = ObjectSnapStatus;
@@ -602,6 +607,17 @@ public partial class MainViewModel : ViewModelBase
     {
         if (SelectedLayout is null) return;
         SelectedLayout.OrthographicTracking = !SelectedLayout.OrthographicTracking;
+        if (SelectedLayout.OrthographicTracking) SelectedLayout.PolarTracking = false;
+        MarkActiveWorkDirty();
+        RefreshLayoutState();
+    }
+
+    [RelayCommand]
+    private void TogglePolar()
+    {
+        if (SelectedLayout is null) return;
+        SelectedLayout.PolarTracking = !SelectedLayout.PolarTracking;
+        if (SelectedLayout.PolarTracking) SelectedLayout.OrthographicTracking = false;
         MarkActiveWorkDirty();
         RefreshLayoutState();
     }
@@ -652,6 +668,7 @@ public partial class MainViewModel : ViewModelBase
         ViewportRevision++;
         OnPropertyChanged(nameof(GridStatus));
         OnPropertyChanged(nameof(OrthoStatus));
+        OnPropertyChanged(nameof(PolarStatus));
         OnPropertyChanged(nameof(SnapStatus));
         OnPropertyChanged(nameof(ObjectSnapStatus));
         OnPropertyChanged(nameof(SnapEndpointEnabled));

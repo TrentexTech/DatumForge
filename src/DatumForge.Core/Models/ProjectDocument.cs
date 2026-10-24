@@ -51,6 +51,8 @@ public sealed class LayoutDefinition
     public bool SnapToGrid { get; set; } = true;
     public bool SnapToObjects { get; set; } = true;
     public bool OrthographicTracking { get; set; }
+    public bool PolarTracking { get; set; }
+    public double PolarIncrementDegrees { get; set; } = 45;
     public ObjectSnapMode ObjectSnaps { get; set; } =
         ObjectSnapMode.Endpoint | ObjectSnapMode.Midpoint | ObjectSnapMode.Center | ObjectSnapMode.Intersection;
     public bool ShowLineWeights { get; set; } = true;

@@ -41,11 +41,15 @@ The narrow command bar below the viewport accepts tool names and precise points.
 
 Relative points use the active tool's first point as their origin. Typed coordinates are exact and therefore do not pass through grid or object snapping.
 
-Commands include `select` (`sel`), `line` (`l`), `polyline` (`pl`), `circle` (`c`), `rectangle` (`rect`), `text` (`t`), `dimension` (`dim`), `move` (`m`), `copy` (`co`), `rotate` (`ro`), `scale` (`sc`), `erase` (`e`), `undo` (`u`), `redo`, `grid`, `ortho`, `snap`, and `osnap`.
+Commands include `select` (`sel`), `line` (`l`), `polyline` (`pl`), `circle` (`c`), `rectangle` (`rect`), `text` (`t`), `dimension` (`dim`), `move` (`m`), `copy` (`co`), `rotate` (`ro`), `scale` (`sc`), `erase` (`e`), `undo` (`u`), `redo`, `grid`, `ortho`, `polar`, `snap`, and `osnap`.
 
 ## Orthographic tracking
 
 Press **F8**, use the **Ortho** view control, or enter `ortho` to constrain pointer input to the dominant horizontal or vertical axis from the active tool's first point. Exact object snaps take precedence over orthographic tracking; otherwise grid snapping is applied before the axis constraint. Typed coordinates remain exact and are not constrained.
+
+## Polar tracking
+
+Press **F10**, use the **Polar** view control, or enter `polar` to constrain pointer input to the nearest 45-degree angle from the active tool's first point. Ortho and Polar are mutually exclusive. Exact object snaps take precedence; otherwise grid snapping is applied before the angle constraint. Typed coordinates remain exact and are not constrained.
 
 ## Object snaps
 

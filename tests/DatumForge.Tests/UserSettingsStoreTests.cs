@@ -59,6 +59,7 @@ public sealed class UserSettingsStoreTests : IDisposable
         Assert.Equal("Ctrl+Z", settings.KeyBindings[KeyBindingDefaults.Undo]);
         Assert.Equal("F7", settings.KeyBindings[KeyBindingDefaults.ToggleGrid]);
         Assert.Equal("F8", settings.KeyBindings[KeyBindingDefaults.ToggleOrtho]);
+        Assert.Equal("F10", settings.KeyBindings[KeyBindingDefaults.TogglePolar]);
     }
 
     [Fact]
