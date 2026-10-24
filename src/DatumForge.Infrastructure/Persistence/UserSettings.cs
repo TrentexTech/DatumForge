@@ -161,6 +161,7 @@ public static class KeyBindingDefaults
     public const string Line = "tool.line";
     public const string Polyline = "tool.polyline";
     public const string Circle = "tool.circle";
+    public const string Arc = "tool.arc";
     public const string Rectangle = "tool.rectangle";
     public const string Text = "tool.text";
     public const string Dimension = "tool.dimension";
@@ -184,6 +185,7 @@ public static class KeyBindingDefaults
         [Line] = string.Empty,
         [Polyline] = string.Empty,
         [Circle] = string.Empty,
+        [Arc] = string.Empty,
         [Rectangle] = string.Empty,
         [Text] = string.Empty,
         [Dimension] = string.Empty,

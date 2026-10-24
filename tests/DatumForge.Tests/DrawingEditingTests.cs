@@ -37,6 +37,22 @@ public sealed class EntityHitTesterTests
         Assert.Null(EntityHitTester.HitTest(drawing, new(10, 10), 1));
     }
 
+    [Fact]
+    public void HitTestFindsArcSweepButNotTheOppositeSideOfItsCircle()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        var arc = new DrawingEntity
+        {
+            Kind = EntityKind.Arc,
+            LayerId = layer.Id,
+            Points = [new(-5, 0), new(0, 5), new(5, 0)]
+        };
+        drawing.Entities.Add(arc);
+
+        Assert.Same(arc, EntityHitTester.HitTest(drawing, new(0, 5.2), 0.5));
+        Assert.Null(EntityHitTester.HitTest(drawing, new(0, -5), 0.5));
+    }
+
     private static DrawingDocument DrawingWithLayer(out DrawingLayer layer)
     {
         layer = new DrawingLayer();

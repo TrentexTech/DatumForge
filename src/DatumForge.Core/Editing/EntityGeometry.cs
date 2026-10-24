@@ -44,6 +44,13 @@ public static class EntityGeometry
             yield break;
         }
 
+        if (entity.Kind == EntityKind.Arc && entity.Points.Count > 2 &&
+            ArcGeometry.TryCreate(entity.Points[0], entity.Points[1], entity.Points[2], out var arc))
+        {
+            foreach (var point in ArcGeometry.BoundsPoints(arc)) yield return point;
+            yield break;
+        }
+
         foreach (var point in entity.Points) yield return point;
     }
 

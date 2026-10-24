@@ -26,6 +26,9 @@ public static class EntityHitTester
         return entity.Kind switch
         {
             EntityKind.Circle => Math.Abs(Distance(entity.Points[0], point) - entity.Radius) <= tolerance,
+            EntityKind.Arc when entity.Points.Count > 2 &&
+                                ArcGeometry.TryCreate(entity.Points[0], entity.Points[1], entity.Points[2], out var arc) =>
+                ArcGeometry.DistanceTo(arc, point) <= tolerance,
             EntityKind.Rectangle when entity.Points.Count > 1 => RectangleDistance(entity.Points[0], entity.Points[1], point) <= tolerance,
             EntityKind.Polyline => PolylineDistance(entity.Points, point) <= tolerance,
             EntityKind.Text => Distance(entity.Points[0], point) <= tolerance * 1.5,

@@ -95,6 +95,29 @@ public sealed class ObjectSnapperTests
     }
 
     [Fact]
+    public void FindsArcEndpointsMidpointCenterQuadrantAndNearestPoint()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        drawing.Entities.Add(new DrawingEntity
+        {
+            Kind = EntityKind.Arc,
+            LayerId = layer.Id,
+            Points = [new(-5, 0), new(0, 5), new(5, 0)]
+        });
+
+        AssertPoint(new CadPoint(-5, 0), ObjectSnapper.FindNearest(
+            drawing, new(-5.2, 0), 1, ObjectSnapMode.Endpoint)?.Point);
+        AssertPoint(new CadPoint(0, 5), ObjectSnapper.FindNearest(
+            drawing, new(0, 5.2), 1, ObjectSnapMode.Midpoint)?.Point);
+        AssertPoint(new CadPoint(0, 0), ObjectSnapper.FindNearest(
+            drawing, new(0.2, 0), 1, ObjectSnapMode.Center)?.Point);
+        Assert.Equal(ObjectSnapKind.Quadrant, ObjectSnapper.FindNearest(
+            drawing, new(0, 5.2), 1, ObjectSnapMode.Quadrant)?.Kind);
+        AssertPoint(new CadPoint(0, 5), ObjectSnapper.FindNearest(
+            drawing, new(0, 5.2), 1, ObjectSnapMode.Nearest)?.Point);
+    }
+
+    [Fact]
     public void FindsNearestPointOnSegmentsAndCircles()
     {
         var drawing = DrawingWithLayer(out var layer);
@@ -160,6 +183,13 @@ public sealed class ObjectSnapperTests
     {
         layer = new DrawingLayer();
         return new DrawingDocument { Layers = [layer] };
+    }
+
+    private static void AssertPoint(CadPoint expected, CadPoint? actual)
+    {
+        Assert.NotNull(actual);
+        Assert.Equal(expected.X, actual.Value.X, 8);
+        Assert.Equal(expected.Y, actual.Value.Y, 8);
     }
 
     private static DrawingEntity Line(Guid layerId, CadPoint start, CadPoint end) =>

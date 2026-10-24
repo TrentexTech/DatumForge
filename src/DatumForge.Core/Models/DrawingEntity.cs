@@ -1,6 +1,6 @@
 namespace DatumForge.Core.Models;
 
-public enum EntityKind { Line, Polyline, Circle, Rectangle, Text, Dimension }
+public enum EntityKind { Line, Polyline, Circle, Arc, Rectangle, Text, Dimension }
 
 public sealed class DrawingEntity
 {

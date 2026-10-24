@@ -4,7 +4,7 @@ public enum DrawingUnits { Millimeters, Centimeters, Meters, Inches, Feet }
 
 public sealed class DrawingDocument
 {
-    public const int CurrentFormatVersion = 1;
+    public const int CurrentFormatVersion = 2;
     public int FormatVersion { get; set; } = CurrentFormatVersion;
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid? ProjectId { get; set; }

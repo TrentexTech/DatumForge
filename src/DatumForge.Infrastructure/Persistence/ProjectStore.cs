@@ -78,6 +78,7 @@ public sealed class ProjectStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(drawingFilePath);
         ArgumentNullException.ThrowIfNull(drawing);
+        drawing.FormatVersion = DrawingDocument.CurrentFormatVersion;
         drawing.Revision++;
         drawing.UpdatedAtUtc = DateTimeOffset.UtcNow;
         await WriteAtomicAsync(Path.GetFullPath(drawingFilePath), drawing, cancellationToken);
@@ -105,6 +106,7 @@ public sealed class ProjectStore
         var path = ResolveInsideRoot(root, reference.RelativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         if (createHistory && File.Exists(path)) await SnapshotAsync(root, "drawing", drawing.Id, drawing.Revision, path, cancellationToken);
+        drawing.FormatVersion = DrawingDocument.CurrentFormatVersion;
         drawing.Revision++;
         drawing.UpdatedAtUtc = DateTimeOffset.UtcNow;
         await WriteAtomicAsync(path, drawing, cancellationToken);

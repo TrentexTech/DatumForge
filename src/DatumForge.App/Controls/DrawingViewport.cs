@@ -28,6 +28,8 @@ public sealed class DrawingViewport : Control
         AvaloniaProperty.Register<DrawingViewport, int>(nameof(RevisionToken));
 
     private CadPoint? _anchor;
+    private CadPoint? _arcStart;
+    private CadPoint? _arcThrough;
     private CadPoint? _previewPoint;
     private ObjectSnapResult? _snapResult;
     private Guid? _hoveredEntityId;
@@ -275,6 +277,8 @@ public sealed class DrawingViewport : Control
     private void ResetInteraction()
     {
         _anchor = null;
+        _arcStart = null;
+        _arcThrough = null;
         _previewPoint = null;
         _snapResult = null;
         _hoveredEntityId = null;
@@ -362,6 +366,8 @@ public sealed class DrawingViewport : Control
                 ? CoordinateSubmissionResult.CompletedInput("Text created.")
                 : CoordinateSubmissionResult.Failure("No visible, unlocked layer is available.");
 
+        if (ActiveTool == "Arc") return ProcessArcPoint(point);
+
         if (_anchor is null)
         {
             _anchor = point;
@@ -384,6 +390,40 @@ public sealed class DrawingViewport : Control
         var radius = Math.Sqrt(Math.Pow(point.X - first.X, 2) + Math.Pow(point.Y - first.Y, 2));
         return AddEntity(kind, [first, point], radius, null)
             ? CoordinateSubmissionResult.CompletedInput($"{kind} created.")
+            : CoordinateSubmissionResult.Failure("No visible, unlocked layer is available.");
+    }
+
+    private CoordinateSubmissionResult ProcessArcPoint(CadPoint point)
+    {
+        if (_arcStart is null)
+        {
+            _arcStart = point;
+            _anchor = point;
+            _previewPoint = point;
+            InvalidateVisual();
+            return CoordinateSubmissionResult.Accepted($"Arc start set to {FormatPoint(point)}; enter a point on the arc.");
+        }
+
+        if (_arcThrough is null)
+        {
+            _arcThrough = point;
+            _anchor = point;
+            _previewPoint = point;
+            InvalidateVisual();
+            return CoordinateSubmissionResult.Accepted($"Arc point set to {FormatPoint(point)}; enter the end point.");
+        }
+
+        var start = _arcStart.Value;
+        var through = _arcThrough.Value;
+        if (!ArcGeometry.TryCreate(start, through, point, out var arc))
+            return CoordinateSubmissionResult.Failure("An arc needs three distinct, non-collinear points.");
+
+        _anchor = null;
+        _arcStart = null;
+        _arcThrough = null;
+        _previewPoint = null;
+        return AddEntity(EntityKind.Arc, [start, through, point], arc.Radius, null)
+            ? CoordinateSubmissionResult.CompletedInput("Arc created.")
             : CoordinateSubmissionResult.Failure("No visible, unlocked layer is available.");
     }
 
@@ -502,6 +542,16 @@ public sealed class DrawingViewport : Control
 
         switch (ActiveTool)
         {
+            case "Arc":
+                if (_arcStart is { } arcStart && _arcThrough is { } arcThrough &&
+                    ArcGeometry.TryCreate(arcStart, arcThrough, target, out var arc))
+                    DrawArc(context, pen, arc);
+                else if (_arcStart is { } start)
+                {
+                    context.DrawLine(pen, ToScreen(start), first);
+                    context.DrawLine(pen, first, second);
+                }
+                break;
             case "Circle":
                 var radius = Math.Sqrt(Math.Pow(target.X - anchor.X, 2) + Math.Pow(target.Y - anchor.Y, 2)) *
                              (Layout?.Zoom ?? 1);
@@ -588,6 +638,10 @@ public sealed class DrawingViewport : Control
 
         switch (entity.Kind)
         {
+            case EntityKind.Arc when entity.Points.Count > 2 &&
+                                     ArcGeometry.TryCreate(entity.Points[0], entity.Points[1], entity.Points[2], out var arc):
+                DrawArc(context, pen, arc);
+                break;
             case EntityKind.Circle:
                 var r = entity.Radius * (Layout?.Zoom ?? 1);
                 context.DrawEllipse(null, pen, new Rect(first.X - r, first.Y - r, r * 2, r * 2));
@@ -612,6 +666,20 @@ public sealed class DrawingViewport : Control
                 context.FillRectangle(Brushes.White, new Rect(screenPoint.X - 3, screenPoint.Y - 3, 6, 6));
                 context.DrawRectangle(new Pen(new SolidColorBrush(Color.Parse("#167FA4")), 1), new Rect(screenPoint.X - 3, screenPoint.Y - 3, 6, 6));
             }
+        }
+    }
+
+    private void DrawArc(DrawingContext context, Pen pen, CadArc arc)
+    {
+        var zoom = Math.Max(0.001, Layout?.Zoom ?? 1);
+        var screenLength = Math.Abs(arc.SweepAngle) * arc.Radius * zoom;
+        var segmentCount = Math.Clamp((int)Math.Ceiling(screenLength / 8), 8, 256);
+        Point? previous = null;
+        foreach (var point in ArcGeometry.Sample(arc, segmentCount))
+        {
+            var current = ToScreen(point);
+            if (previous is { } start) context.DrawLine(pen, start, current);
+            previous = current;
         }
     }
 

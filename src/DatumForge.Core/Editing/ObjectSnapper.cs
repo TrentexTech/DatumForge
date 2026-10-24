@@ -56,14 +56,19 @@ public static class ObjectSnapper
 
         if (modes.HasFlag(ObjectSnapMode.Midpoint))
         {
-            foreach (var segment in Segments(entity))
-                yield return new ObjectSnapResult(Midpoint(segment.Start, segment.End), ObjectSnapKind.Midpoint, entity.Id, 0);
+            if (TryGetArc(entity, out var arc))
+                yield return new ObjectSnapResult(arc.PointAt(0.5), ObjectSnapKind.Midpoint, entity.Id, 0);
+            else
+                foreach (var segment in Segments(entity))
+                    yield return new ObjectSnapResult(Midpoint(segment.Start, segment.End), ObjectSnapKind.Midpoint, entity.Id, 0);
         }
 
         if (modes.HasFlag(ObjectSnapMode.Center))
         {
             if (entity.Kind == EntityKind.Circle && entity.Points.Count > 0)
                 yield return new ObjectSnapResult(entity.Points[0], ObjectSnapKind.Center, entity.Id, 0);
+            else if (TryGetArc(entity, out var arc))
+                yield return new ObjectSnapResult(arc.Center, ObjectSnapKind.Center, entity.Id, 0);
             else if (entity.Kind == EntityKind.Rectangle && entity.Points.Count > 1)
                 yield return new ObjectSnapResult(Midpoint(entity.Points[0], entity.Points[1]), ObjectSnapKind.Center, entity.Id, 0);
         }
@@ -78,6 +83,11 @@ public static class ObjectSnapper
             yield return new ObjectSnapResult(new CadPoint(center.X, center.Y + radius), ObjectSnapKind.Quadrant, entity.Id, 0);
             yield return new ObjectSnapResult(new CadPoint(center.X - radius, center.Y), ObjectSnapKind.Quadrant, entity.Id, 0);
             yield return new ObjectSnapResult(new CadPoint(center.X, center.Y - radius), ObjectSnapKind.Quadrant, entity.Id, 0);
+        }
+        else if (modes.HasFlag(ObjectSnapMode.Quadrant) && TryGetArc(entity, out var arc))
+        {
+            foreach (var quadrant in ArcGeometry.Quadrants(arc))
+                yield return new ObjectSnapResult(quadrant, ObjectSnapKind.Quadrant, entity.Id, 0);
         }
 
         if (modes.HasFlag(ObjectSnapMode.Nearest) && NearestPoint(entity, pointer) is { } nearest)
@@ -98,6 +108,8 @@ public static class ObjectSnapper
                 : new CadPoint(center.X + dx / distance * radius, center.Y + dy / distance * radius);
         }
 
+        if (TryGetArc(entity, out var arc)) return ArcGeometry.NearestPoint(arc, pointer);
+
         var nearestSegmentPoint = Segments(entity)
             .Select(segment => ClosestPoint(segment.Start, segment.End, pointer))
             .OrderBy(point => Distance(point, pointer))
@@ -110,6 +122,12 @@ public static class ObjectSnapper
     private static IEnumerable<CadPoint> Endpoints(DrawingEntity entity)
     {
         if (entity.Kind == EntityKind.Circle) yield break;
+        if (entity.Kind == EntityKind.Arc && entity.Points.Count > 2)
+        {
+            yield return entity.Points[0];
+            yield return entity.Points[2];
+            yield break;
+        }
         if (entity.Kind == EntityKind.Rectangle && entity.Points.Count > 1)
         {
             foreach (var corner in RectangleCorners(entity.Points[0], entity.Points[1])) yield return corner;
@@ -128,7 +146,7 @@ public static class ObjectSnapper
             yield break;
         }
 
-        if (entity.Kind is EntityKind.Circle or EntityKind.Text || entity.Points.Count < 2) yield break;
+        if (entity.Kind is EntityKind.Circle or EntityKind.Arc or EntityKind.Text || entity.Points.Count < 2) yield break;
         for (var index = 1; index < entity.Points.Count; index++)
             yield return new Segment(entity.Id, entity.Points[index - 1], entity.Points[index]);
     }
@@ -167,6 +185,14 @@ public static class ObjectSnapper
 
     private static CadPoint Midpoint(CadPoint first, CadPoint second) =>
         new((first.X + second.X) / 2, (first.Y + second.Y) / 2);
+
+    private static bool TryGetArc(DrawingEntity entity, out CadArc arc)
+    {
+        arc = default;
+        return entity.Kind == EntityKind.Arc &&
+               entity.Points.Count > 2 &&
+               ArcGeometry.TryCreate(entity.Points[0], entity.Points[1], entity.Points[2], out arc);
+    }
 
     private static CadPoint ClosestPoint(CadPoint start, CadPoint end, CadPoint pointer)
     {

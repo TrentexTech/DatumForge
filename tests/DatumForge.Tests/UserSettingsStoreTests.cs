@@ -60,6 +60,7 @@ public sealed class UserSettingsStoreTests : IDisposable
         Assert.Equal("F7", settings.KeyBindings[KeyBindingDefaults.ToggleGrid]);
         Assert.Equal("F8", settings.KeyBindings[KeyBindingDefaults.ToggleOrtho]);
         Assert.Equal("F10", settings.KeyBindings[KeyBindingDefaults.TogglePolar]);
+        Assert.True(settings.KeyBindings.ContainsKey(KeyBindingDefaults.Arc));
     }
 
     [Fact]

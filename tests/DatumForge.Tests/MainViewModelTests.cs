@@ -123,6 +123,15 @@ public sealed class MainViewModelTests : IDisposable
     }
 
     [Fact]
+    public void ArcCommandSelectsTheArcTool()
+    {
+        var viewModel = new MainViewModel(new ProjectStore(), new UserSettingsStore(Path.Combine(_directory, "settings")));
+
+        Assert.True(viewModel.TryExecuteTextCommand("arc"));
+        Assert.Equal("Arc", viewModel.ActiveTool);
+    }
+
+    [Fact]
     public async Task ViewportNavigationIsStoredInUserSettingsWithoutDirtyingProject()
     {
         var store = new ProjectStore();

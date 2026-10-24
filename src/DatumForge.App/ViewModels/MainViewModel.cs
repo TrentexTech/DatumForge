@@ -40,7 +40,7 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<ViewportModuleItemViewModel> ViewportModules { get; } = [];
     public ObservableCollection<RecentFileEntry> RecentProjects { get; } = [];
     public ObservableCollection<RecentFileEntry> RecentDrawings { get; } = [];
-    public IReadOnlyList<string> DrawingTools { get; } = ["Select", "Line", "Polyline", "Circle", "Rectangle", "Text", "Dimension"];
+    public IReadOnlyList<string> DrawingTools { get; } = ["Select", "Line", "Polyline", "Circle", "Arc", "Rectangle", "Text", "Dimension"];
     public IReadOnlyList<string> ModifyTools { get; } = ["Move", "Copy", "Rotate", "Scale"];
 
     [ObservableProperty] public partial ProjectTabViewModel? SelectedProjectTab { get; set; }
@@ -337,6 +337,7 @@ public partial class MainViewModel : ViewModelBase
             "line" or "l" => "Line",
             "polyline" or "pl" => "Polyline",
             "circle" or "c" => "Circle",
+            "arc" or "a" => "Arc",
             "rectangle" or "rect" or "rec" => "Rectangle",
             "text" or "t" => "Text",
             "dimension" or "dim" => "Dimension",
@@ -463,6 +464,7 @@ public partial class MainViewModel : ViewModelBase
             "Select" => "Select entities",
             "Move" or "Copy" => $"{ActiveTool}: choose a base point, then a target point",
             "Rotate" or "Scale" => $"{ActiveTool}: choose reference and target points around the selection center",
+            "Arc" => "Arc: choose the start, a point on the arc, and the end point",
             _ => $"{ActiveTool}: click in the viewport to draw"
         };
     }

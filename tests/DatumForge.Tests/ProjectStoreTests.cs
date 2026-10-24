@@ -69,16 +69,26 @@ public sealed class ProjectStoreTests : IDisposable
             new() { Kind = ViewportModuleKind.Layers, Size = 310 }
         ];
         drawing.Entities.Add(new DrawingEntity { Kind = EntityKind.Line, LayerId = layer.Id, Points = [new(1, 2), new(3, 4)] });
+        drawing.Entities.Add(new DrawingEntity
+        {
+            Kind = EntityKind.Arc,
+            LayerId = layer.Id,
+            Points = [new(-5, 0), new(0, 5), new(5, 0)],
+            Radius = 5
+        });
         await _store.SaveAsync(workspace);
 
         var loaded = await _store.LoadProjectAsync(workspace.ProjectFilePath);
         var loadedDrawing = Assert.Single(loaded.Drawings.Values);
+        Assert.Equal(DrawingDocument.CurrentFormatVersion, loadedDrawing.FormatVersion);
         var loadedLayer = Assert.Single(loadedDrawing.Layers);
         Assert.Equal(CadLineType.DashDot, loadedLayer.LineType);
         Assert.Equal(0.7, loadedLayer.LineWeightMm);
         Assert.Equal(0.45, loadedLayer.Opacity);
         Assert.Equal("Annotations", loadedLayer.Group);
-        Assert.Single(loadedDrawing.Entities);
+        Assert.Equal(2, loadedDrawing.Entities.Count);
+        Assert.Equal(EntityKind.Arc, loadedDrawing.Entities[1].Kind);
+        Assert.Equal([new CadPoint(-5, 0), new CadPoint(0, 5), new CadPoint(5, 0)], loadedDrawing.Entities[1].Points);
         var loadedLayout = Assert.Single(loaded.Project.Layouts);
         Assert.False(loadedLayout.SnapToObjects);
         Assert.True(loadedLayout.PolarTracking);
@@ -166,6 +176,26 @@ public sealed class ProjectStoreTests : IDisposable
         await File.WriteAllTextAsync(workspace.ProjectFilePath, changed);
         var error = await Assert.ThrowsAsync<InvalidDataException>(() => _store.LoadProjectAsync(workspace.ProjectFilePath));
         Assert.Contains("supports up to", error.Message);
+    }
+
+    [Fact]
+    public async Task VersionOneDrawingIsReadableAndUpgradedWhenSaved()
+    {
+        var path = Path.Combine(_directory, "Legacy.dfdraw");
+        var drawing = new DrawingDocument { FormatVersion = 1, Layers = [new DrawingLayer()] };
+        await _store.SaveDrawingAsync(path, drawing);
+        var json = await File.ReadAllTextAsync(path);
+        json = json.Replace(
+            $"\"formatVersion\": {DrawingDocument.CurrentFormatVersion}",
+            "\"formatVersion\": 1",
+            StringComparison.Ordinal);
+        await File.WriteAllTextAsync(path, json);
+
+        var loaded = await _store.LoadDrawingAsync(path);
+
+        Assert.Equal(1, loaded.FormatVersion);
+        await _store.SaveDrawingAsync(path, loaded);
+        Assert.Equal(DrawingDocument.CurrentFormatVersion, loaded.FormatVersion);
     }
 
     public void Dispose()

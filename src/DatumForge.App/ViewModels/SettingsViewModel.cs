@@ -20,6 +20,7 @@ public static class ShortcutCatalog
         new(KeyBindingDefaults.Line, "Line tool", "Draw", "Line"),
         new(KeyBindingDefaults.Polyline, "Polyline tool", "Draw", "Polyline"),
         new(KeyBindingDefaults.Circle, "Circle tool", "Draw", "Circle"),
+        new(KeyBindingDefaults.Arc, "Arc tool", "Draw", "Arc"),
         new(KeyBindingDefaults.Rectangle, "Rectangle tool", "Draw", "Rectangle"),
         new(KeyBindingDefaults.Text, "Text tool", "Draw", "Text"),
         new(KeyBindingDefaults.Dimension, "Dimension tool", "Draw", "Dimension"),
