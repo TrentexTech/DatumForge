@@ -16,8 +16,8 @@ jobs:
         os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
           cache: true
@@ -35,14 +35,15 @@ jobs:
     runs-on: windows-latest
     needs: build-and-test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
-      - run: dotnet restore DatumForge.slnx
+      - name: Restore Windows runtime assets
+        run: dotnet restore src/DatumForge.App/DatumForge.App.csproj -r win-x64
       - name: Publish unsigned portable build
         run: dotnet publish src/DatumForge.App/DatumForge.App.csproj -c Release -r win-x64 --self-contained false --no-restore -o artifacts/win-x64
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: DatumForge-win-x64-unsigned
           path: artifacts/win-x64
