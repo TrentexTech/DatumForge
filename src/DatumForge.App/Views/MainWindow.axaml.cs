@@ -15,7 +15,11 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Opened += (_, _) => RestoreWindowSettings();
+        Opened += (_, _) =>
+        {
+            RestoreWindowSettings();
+            ApplyKeyBindings();
+        };
         SizeChanged += (_, _) => CaptureNormalWindowSize();
         Closing += MainWindow_OnClosing;
     }
@@ -24,9 +28,6 @@ public partial class MainWindow : Window
 
     private void Viewport_OnEntityCreated(object? sender, EntityCreatedEventArgs e) => ViewModel.RecordEntityCreated(e.Entity);
     private void Viewport_OnSelectionChanged(object? sender, EntitySelectionChangedEventArgs e) => ViewModel.UpdateSelection(e.EntityIds);
-    private void Viewport_OnDeleteRequested(object? sender, EventArgs e) => ViewModel.EraseCommand.Execute(null);
-    private void Viewport_OnUndoRequested(object? sender, EventArgs e) => ViewModel.UndoCommand.Execute(null);
-    private void Viewport_OnRedoRequested(object? sender, EventArgs e) => ViewModel.RedoCommand.Execute(null);
     private void Viewport_OnTransformRequested(object? sender, EntityTransformRequestedEventArgs e) =>
         ViewModel.ApplyTransform(e.Kind, e.EntityIds, e.Reference, e.Target);
 
@@ -37,6 +38,54 @@ public partial class MainWindow : Window
         WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     private void Close_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Close();
+
+    private async void Settings_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var saved = await new SettingsWindow(ViewModel).ShowDialog<bool>(this);
+        if (!saved) return;
+        ApplyKeyBindings();
+        ViewModel.StatusText = "Settings saved";
+    }
+
+    private void ApplyKeyBindings()
+    {
+        KeyBindings.Clear();
+        foreach (var definition in ShortcutCatalog.All)
+        {
+            var gestureText = ViewModel.UserSettings.KeyBindings.GetValueOrDefault(definition.Id, string.Empty);
+            if (string.IsNullOrWhiteSpace(gestureText)) continue;
+
+            var command = definition.Id switch
+            {
+                KeyBindingDefaults.Save => ViewModel.SaveCommand,
+                KeyBindingDefaults.Undo => ViewModel.UndoCommand,
+                KeyBindingDefaults.Redo => ViewModel.RedoCommand,
+                KeyBindingDefaults.Erase => ViewModel.EraseCommand,
+                KeyBindingDefaults.ToggleGrid => ViewModel.ToggleGridCommand,
+                KeyBindingDefaults.ToggleGridSnap => ViewModel.ToggleSnapCommand,
+                KeyBindingDefaults.ToggleObjectSnap => ViewModel.ToggleObjectSnapCommand,
+                _ when definition.CommandParameter is not null => ViewModel.SelectToolCommand,
+                _ => null
+            };
+            if (command is null) continue;
+
+            try
+            {
+                var keyBinding = new KeyBinding
+                {
+                    Gesture = KeyGesture.Parse(gestureText),
+                    Command = command
+                };
+                if (definition.CommandParameter is not null)
+                    keyBinding.CommandParameter = definition.CommandParameter;
+                KeyBindings.Add(keyBinding);
+            }
+            catch (FormatException)
+            {
+                ViewModel.StatusText = $"Ignored invalid shortcut for {definition.Name}: {gestureText}";
+            }
+        }
+    }
 
     private async void MainWindow_OnClosing(object? sender, WindowClosingEventArgs e)
     {

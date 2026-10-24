@@ -12,7 +12,10 @@ The settings document is versioned JSON and currently stores:
 
 - the selected application theme and recent-item limit;
 - the last normal window size and whether the window was maximized;
+- remappable keyboard shortcut assignments;
 - recently opened projects and standalone drawings, including their paths, display names, and last-opened timestamps.
+
+Open the gear button in the DatumForge title bar and choose **Keybinds** to remap a command, clear an assignment, or restore the defaults. Saved changes take effect immediately and are reused in later sessions.
 
 Settings are written through a temporary file and then atomically replaced. If the file is malformed or uses an unsupported newer format, DatumForge preserves it as `settings.invalid-<timestamp>.json` and starts with safe defaults.
 

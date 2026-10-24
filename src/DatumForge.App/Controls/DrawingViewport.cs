@@ -11,9 +11,6 @@ public sealed class DrawingViewport : Control
 {
     public event EventHandler<EntityCreatedEventArgs>? EntityCreated;
     public event EventHandler<EntitySelectionChangedEventArgs>? SelectionChanged;
-    public event EventHandler? DeleteRequested;
-    public event EventHandler? UndoRequested;
-    public event EventHandler? RedoRequested;
     public event EventHandler<EntityTransformRequestedEventArgs>? TransformRequested;
 
     public static readonly StyledProperty<DrawingDocument?> DrawingProperty =
@@ -112,25 +109,7 @@ public sealed class DrawingViewport : Control
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        var control = e.KeyModifiers.HasFlag(KeyModifiers.Control);
-        var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
-        if (control && e.Key == Key.Z)
-        {
-            if (shift) RedoRequested?.Invoke(this, EventArgs.Empty);
-            else UndoRequested?.Invoke(this, EventArgs.Empty);
-            e.Handled = true;
-        }
-        else if (control && e.Key == Key.Y)
-        {
-            RedoRequested?.Invoke(this, EventArgs.Empty);
-            e.Handled = true;
-        }
-        else if ((e.Key == Key.Delete || e.Key == Key.Back) && _selectedEntityIds.Count > 0)
-        {
-            DeleteRequested?.Invoke(this, EventArgs.Empty);
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Escape)
+        if (e.Key == Key.Escape)
         {
             _anchor = null;
             ClearSelection();

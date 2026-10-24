@@ -16,6 +16,8 @@ public sealed class UserSettingsStoreTests : IDisposable
         settings.Window.Width = 1280;
         settings.Window.Height = 720;
         settings.Window.IsMaximized = true;
+        settings.KeyBindings[KeyBindingDefaults.Save] = "Ctrl+Shift+S";
+        settings.KeyBindings[KeyBindingDefaults.Line] = "L";
         settings.RememberProject(Path.Combine(_directory, "Workshop.dfproj"), "Workshop");
         settings.RememberDrawing(Path.Combine(_directory, "Detail.dfdraw"), "Detail");
 
@@ -27,8 +29,28 @@ public sealed class UserSettingsStoreTests : IDisposable
         Assert.Equal(1280, loaded.Window.Width);
         Assert.Equal(720, loaded.Window.Height);
         Assert.True(loaded.Window.IsMaximized);
+        Assert.Equal("Ctrl+Shift+S", loaded.KeyBindings[KeyBindingDefaults.Save]);
+        Assert.Equal("L", loaded.KeyBindings[KeyBindingDefaults.Line]);
         Assert.Equal("Workshop", Assert.Single(loaded.RecentProjects).DisplayName);
         Assert.Equal("Detail", Assert.Single(loaded.RecentDrawings).DisplayName);
+    }
+
+    [Fact]
+    public void NormalizeAddsNewDefaultKeyBindingsWithoutOverwritingRemaps()
+    {
+        var settings = new UserSettings
+        {
+            KeyBindings = new Dictionary<string, string>
+            {
+                [KeyBindingDefaults.Save] = "Ctrl+Shift+S"
+            }
+        };
+
+        settings.Normalize();
+
+        Assert.Equal("Ctrl+Shift+S", settings.KeyBindings[KeyBindingDefaults.Save]);
+        Assert.Equal("Ctrl+Z", settings.KeyBindings[KeyBindingDefaults.Undo]);
+        Assert.Equal("F7", settings.KeyBindings[KeyBindingDefaults.ToggleGrid]);
     }
 
     [Fact]

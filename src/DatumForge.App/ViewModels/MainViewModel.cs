@@ -82,6 +82,10 @@ public partial class MainViewModel : ViewModelBase
     public string SnapStatus => SelectedLayout?.SnapToGrid == true ? "Grid snap on" : "Grid snap off";
     public string ObjectSnapStatus => SelectedLayout?.SnapToObjects == true ? "Object snap on" : "Object snap off";
     public string ToolStatus => $"TOOL: {ActiveTool.ToUpperInvariant()}";
+    public string SaveToolTip => BuildShortcutToolTip("Save", KeyBindingDefaults.Save);
+    public string UndoToolTip => BuildShortcutToolTip("Undo", KeyBindingDefaults.Undo);
+    public string RedoToolTip => BuildShortcutToolTip("Redo", KeyBindingDefaults.Redo);
+    public string EraseToolTip => BuildShortcutToolTip("Erase selected entities", KeyBindingDefaults.Erase);
     public bool SnapEndpointEnabled { get => HasSnapMode(ObjectSnapMode.Endpoint); set => SetSnapMode(ObjectSnapMode.Endpoint, value); }
     public bool SnapMidpointEnabled { get => HasSnapMode(ObjectSnapMode.Midpoint); set => SetSnapMode(ObjectSnapMode.Midpoint, value); }
     public bool SnapCenterEnabled { get => HasSnapMode(ObjectSnapMode.Center); set => SetSnapMode(ObjectSnapMode.Center, value); }
@@ -159,6 +163,17 @@ public partial class MainViewModel : ViewModelBase
     public Task SaveUserSettingsAsync() => _userSettingsStore.SaveAsync(UserSettings);
 
     public void SaveUserSettings() => _userSettingsStore.Save(UserSettings);
+
+    public async Task UpdateKeyBindingsAsync(IReadOnlyDictionary<string, string> keyBindings)
+    {
+        UserSettings.KeyBindings = new Dictionary<string, string>(keyBindings, StringComparer.OrdinalIgnoreCase);
+        UserSettings.Normalize();
+        await SaveUserSettingsAsync();
+        OnPropertyChanged(nameof(SaveToolTip));
+        OnPropertyChanged(nameof(UndoToolTip));
+        OnPropertyChanged(nameof(RedoToolTip));
+        OnPropertyChanged(nameof(EraseToolTip));
+    }
 
     public async Task<bool> SaveAllUnsavedWorkAsync()
     {
@@ -653,6 +668,12 @@ public partial class MainViewModel : ViewModelBase
 
     private static string BuildSummary(ProjectWorkspace workspace) =>
         $"{workspace.Project.Drawings.Count} drawing(s) · {workspace.Project.Layouts.Count} layout(s) · revision {workspace.Project.Revision}";
+
+    private string BuildShortcutToolTip(string label, string actionId)
+    {
+        var gesture = UserSettings.KeyBindings.GetValueOrDefault(actionId, string.Empty);
+        return string.IsNullOrWhiteSpace(gesture) ? label : $"{label} ({gesture})";
+    }
 }
 
 public sealed class ProjectTabViewModel

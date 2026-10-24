@@ -9,6 +9,7 @@ public sealed class UserSettings
     public int FormatVersion { get; set; } = CurrentFormatVersion;
     public UserPreferences Preferences { get; set; } = new();
     public WindowSettings Window { get; set; } = new();
+    public Dictionary<string, string> KeyBindings { get; set; } = KeyBindingDefaults.Create();
     public List<RecentFileEntry> RecentProjects { get; set; } = [];
     public List<RecentFileEntry> RecentDrawings { get; set; } = [];
 
@@ -26,8 +27,13 @@ public sealed class UserSettings
     {
         Preferences ??= new UserPreferences();
         Window ??= new WindowSettings();
+        KeyBindings ??= [];
         RecentProjects ??= [];
         RecentDrawings ??= [];
+        foreach (var binding in KeyBindingDefaults.Values)
+            KeyBindings.TryAdd(binding.Key, binding.Value);
+        foreach (var key in KeyBindings.Keys.ToArray())
+            KeyBindings[key] = KeyBindings[key]?.Trim() ?? string.Empty;
         Preferences.RecentItemLimit = Math.Clamp(Preferences.RecentItemLimit, 1, 50);
         NormalizeRecents(RecentProjects, Preferences.RecentItemLimit);
         NormalizeRecents(RecentDrawings, Preferences.RecentItemLimit);
@@ -87,6 +93,53 @@ public sealed class UserSettings
 
     private static StringComparer PathComparer =>
         OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+}
+
+public static class KeyBindingDefaults
+{
+    public const string Save = "save";
+    public const string Undo = "undo";
+    public const string Redo = "redo";
+    public const string Erase = "erase";
+    public const string Select = "tool.select";
+    public const string Line = "tool.line";
+    public const string Polyline = "tool.polyline";
+    public const string Circle = "tool.circle";
+    public const string Rectangle = "tool.rectangle";
+    public const string Text = "tool.text";
+    public const string Dimension = "tool.dimension";
+    public const string Move = "tool.move";
+    public const string Copy = "tool.copy";
+    public const string Rotate = "tool.rotate";
+    public const string Scale = "tool.scale";
+    public const string ToggleGrid = "view.toggle-grid";
+    public const string ToggleGridSnap = "view.toggle-grid-snap";
+    public const string ToggleObjectSnap = "view.toggle-object-snap";
+
+    public static IReadOnlyDictionary<string, string> Values { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        [Save] = "Ctrl+S",
+        [Undo] = "Ctrl+Z",
+        [Redo] = "Ctrl+Y",
+        [Erase] = "Delete",
+        [Select] = string.Empty,
+        [Line] = string.Empty,
+        [Polyline] = string.Empty,
+        [Circle] = string.Empty,
+        [Rectangle] = string.Empty,
+        [Text] = string.Empty,
+        [Dimension] = string.Empty,
+        [Move] = string.Empty,
+        [Copy] = string.Empty,
+        [Rotate] = string.Empty,
+        [Scale] = string.Empty,
+        [ToggleGrid] = "F7",
+        [ToggleGridSnap] = "F9",
+        [ToggleObjectSnap] = "F3"
+    };
+
+    public static Dictionary<string, string> Create() =>
+        new(Values, StringComparer.OrdinalIgnoreCase);
 }
 
 public sealed class UserPreferences

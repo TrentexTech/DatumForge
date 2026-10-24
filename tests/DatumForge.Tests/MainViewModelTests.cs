@@ -46,6 +46,37 @@ public sealed class MainViewModelTests : IDisposable
         Assert.Single((await store.LoadDrawingAsync(path)).Entities);
     }
 
+    [Fact]
+    public async Task KeyBindingChangesArePersistedAndReflectedInTooltips()
+    {
+        var settingsStore = new UserSettingsStore(Path.Combine(_directory, "settings"));
+        var viewModel = new MainViewModel(new ProjectStore(), settingsStore);
+        var bindings = KeyBindingDefaults.Create();
+        bindings[KeyBindingDefaults.Save] = "Ctrl+Shift+S";
+        bindings[KeyBindingDefaults.Line] = "L";
+
+        await viewModel.UpdateKeyBindingsAsync(bindings);
+
+        var loaded = await settingsStore.LoadAsync();
+        Assert.Equal("Ctrl+Shift+S", loaded.KeyBindings[KeyBindingDefaults.Save]);
+        Assert.Equal("L", loaded.KeyBindings[KeyBindingDefaults.Line]);
+        Assert.Equal("Save (Ctrl+Shift+S)", viewModel.SaveToolTip);
+    }
+
+    [Fact]
+    public async Task SettingsRejectDuplicateKeyBindings()
+    {
+        var settingsStore = new UserSettingsStore(Path.Combine(_directory, "settings"));
+        var settings = new SettingsViewModel(new MainViewModel(new ProjectStore(), settingsStore));
+        settings.Shortcuts.Single(shortcut => shortcut.Id == KeyBindingDefaults.Undo).Gesture = "Ctrl+S";
+
+        var saved = await settings.SaveAsync(_ => true);
+
+        Assert.False(saved);
+        Assert.Contains("assigned to both", settings.ValidationMessage, StringComparison.Ordinal);
+        Assert.False(File.Exists(settingsStore.SettingsFilePath));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);
