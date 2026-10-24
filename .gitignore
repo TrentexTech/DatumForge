@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+.dotnet-home/
+.vs/
+.vscode/
+.idea/
+artifacts/
+TestResults/
+*.user
+*.suo
+*.tmp
+*.log
+*.dfproj
+*.dfdraw
+.datumforge/
+!samples/**/*.dfproj
+!samples/**/*.dfdraw
