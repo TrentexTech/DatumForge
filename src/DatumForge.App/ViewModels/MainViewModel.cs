@@ -47,6 +47,7 @@ public partial class MainViewModel : ViewModelBase
     public string GridStatus => SelectedLayout?.ShowGrid == true ? "Grid on" : "Grid off";
     public string SnapStatus => SelectedLayout?.SnapToGrid == true ? "Grid snap on" : "Grid snap off";
     public string ObjectSnapStatus => SelectedLayout?.SnapToObjects == true ? "Object snap on" : "Object snap off";
+    public string ToolStatus => $"TOOL: {ActiveTool.ToUpperInvariant()}";
     public bool SnapEndpointEnabled { get => HasSnapMode(ObjectSnapMode.Endpoint); set => SetSnapMode(ObjectSnapMode.Endpoint, value); }
     public bool SnapMidpointEnabled { get => HasSnapMode(ObjectSnapMode.Midpoint); set => SetSnapMode(ObjectSnapMode.Midpoint, value); }
     public bool SnapCenterEnabled { get => HasSnapMode(ObjectSnapMode.Center); set => SetSnapMode(ObjectSnapMode.Center, value); }
@@ -74,6 +75,8 @@ public partial class MainViewModel : ViewModelBase
     }
 
     partial void OnWarningMessageChanged(string? value) => OnPropertyChanged(nameof(HasWarning));
+
+    partial void OnActiveToolChanged(string value) => OnPropertyChanged(nameof(ToolStatus));
 
     partial void OnSelectedLayoutChanged(LayoutDefinition? value) => RefreshLayoutState();
 
