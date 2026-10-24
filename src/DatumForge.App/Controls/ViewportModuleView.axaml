@@ -51,8 +51,9 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Background="#101419" IsVisible="{Binding IsViewer}">
+        <Border Grid.Row="1" Background="#101419" IsVisible="{Binding IsViewer}" ClipToBounds="True">
             <controls:DrawingViewport x:Name="DrawingSurface"
+                                      ClipToBounds="True"
                                       Drawing="{Binding Owner.ActiveDrawing}"
                                       Layout="{Binding Owner.SelectedLayout}"
                                       ActiveTool="{Binding Owner.ActiveTool}"
