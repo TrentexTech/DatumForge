@@ -73,7 +73,7 @@
                             ToolTip.Tip="Minimize"
                             AutomationProperties.Name="Minimize"
                             WindowDecorationProperties.ElementRole="MinimizeButton">
-                        <Border Width="10"
+                        <Border Width="12"
                                 Height="1"
                                 Background="{Binding $parent[Button].Foreground}"
                                 VerticalAlignment="Bottom" />
