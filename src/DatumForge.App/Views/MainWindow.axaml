@@ -1,0 +1,185 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DatumForge.App.ViewModels"
+        xmlns:controls="using:DatumForge.App.Controls"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1440" d:DesignHeight="900"
+        x:Class="DatumForge.App.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="{Binding WindowTitle}"
+        Width="1440" Height="900" MinWidth="1024" MinHeight="680"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+        <!-- Application ribbon -->
+        <Border Grid.Row="0" Background="#11171C" BorderBrush="#2A333B" BorderThickness="0,0,0,1" Padding="12,8">
+            <Grid ColumnDefinitions="Auto,16,Auto,1,Auto,1,Auto,*">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+                    <Border Width="30" Height="30" CornerRadius="7" Background="#27A879">
+                        <TextBlock Text="D" FontWeight="Bold" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel>
+                        <TextBlock Text="DATUMFORGE" FontWeight="SemiBold" FontSize="14" />
+                        <TextBlock Text="Precision drawing workspace" Foreground="#7F919E" FontSize="10" />
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3">
+                    <Button Classes="tool" Content="＋ New" Click="NewProject_OnClick" />
+                    <Button Classes="tool" Content="⌁ Open project" Click="OpenProject_OnClick" />
+                    <Button Classes="tool" Content="Open drawing" Click="OpenDrawing_OnClick" />
+                    <Button Classes="tool" Content="Save" Command="{Binding SaveCommand}" />
+                </StackPanel>
+                <Border Grid.Column="3" Width="1" Background="#303A43" Margin="12,2" />
+                <ItemsControl Grid.Column="4" ItemsSource="{Binding Tools}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Classes="tool" Content="{Binding .}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectToolCommand}" CommandParameter="{Binding .}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Border Grid.Column="5" Width="1" Background="#303A43" Margin="12,2" />
+                <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="3">
+                    <Button Classes="tool" Content="＋ Layer" Command="{Binding AddLayerCommand}" />
+                    <Button Classes="tool" Content="Properties" />
+                </StackPanel>
+                <TextBlock Grid.Column="7" Text="{Binding ActiveTool, StringFormat='ACTIVE · {0}'}" Foreground="#67D6AD" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="16,0" />
+            </Grid>
+        </Border>
+
+        <!-- Project/start tabs -->
+        <Border Grid.Row="1" Background="#0D1216" BorderBrush="#263039" BorderThickness="0,0,0,1" Padding="9,5,9,0">
+            <ListBox ItemsSource="{Binding ProjectTabs}" SelectedItem="{Binding SelectedProjectTab}" Background="Transparent" BorderThickness="0">
+                <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem"><Setter Property="Padding" Value="16,8" /><Setter Property="CornerRadius" Value="5,5,0,0" /></Style>
+                    <Style Selector="ListBoxItem:selected"><Setter Property="Background" Value="#202A32" /></Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate><DataTemplate x:DataType="vm:ProjectTabViewModel"><TextBlock Text="{Binding Title}" /></DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+
+        <!-- Drawing tabs -->
+        <Border Grid.Row="2" Background="#151C22" BorderBrush="#2B353E" BorderThickness="0,0,0,1" Padding="13,4" IsVisible="{Binding IsWorkspaceVisible}">
+            <Grid ColumnDefinitions="Auto,*">
+                <TextBlock Text="DRAWINGS" FontSize="10" FontWeight="SemiBold" Foreground="#71838F" VerticalAlignment="Center" Margin="0,0,12,0" />
+                <ListBox Grid.Column="1" ItemsSource="{Binding DrawingTabs}" SelectedItem="{Binding SelectedDrawingTab}" Background="Transparent" BorderThickness="0">
+                    <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4" /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                    <ListBox.Styles><Style Selector="ListBoxItem"><Setter Property="Padding" Value="13,6" /><Setter Property="CornerRadius" Value="4" /></Style></ListBox.Styles>
+                    <ListBox.ItemTemplate><DataTemplate x:DataType="vm:DrawingTabViewModel"><TextBlock Text="{Binding Title}" /></DataTemplate></ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <!-- Association safety warning -->
+        <Border Grid.Row="3" IsVisible="{Binding HasWarning}" Background="#3B2B17" BorderBrush="#9F6B22" BorderThickness="0,0,0,1" Padding="14,9">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Text="⚠" Foreground="#F4B95E" FontSize="16" Margin="0,0,10,0" />
+                <TextBlock Grid.Column="1" Text="{Binding WarningMessage}" Foreground="#F5D7A5" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button Grid.Column="2" Content="Dismiss" Command="{Binding DismissWarningCommand}" Background="Transparent" />
+            </Grid>
+        </Border>
+
+        <!-- Main content -->
+        <Grid Grid.Row="4">
+            <Border IsVisible="{Binding IsWelcomeVisible}" Background="#0C1014">
+                <Grid ColumnDefinitions="1.2*,1*" Margin="80,60">
+                    <StackPanel VerticalAlignment="Center" MaxWidth="600" Spacing="18">
+                        <TextBlock Text="DRAW WITH INTENT." FontSize="12" FontWeight="Bold" Foreground="#27A879" />
+                        <TextBlock Text="A modern foundation for precise technical drawings." FontSize="42" FontWeight="SemiBold" TextWrapping="Wrap" LineHeight="48" />
+                        <TextBlock Text="Projects keep layouts, drawings, references and revision history together. Individual drawings stay portable—with clear warnings when project context matters." Foreground="#9CACB7" FontSize="16" TextWrapping="Wrap" LineHeight="25" MaxWidth="560" />
+                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+                            <Button Classes="primary" Content="Create a project" Click="NewProject_OnClick" />
+                            <Button Content="Open existing project" Padding="18,10" Click="OpenProject_OnClick" />
+                        </StackPanel>
+                    </StackPanel>
+                    <Border Grid.Column="1" Classes="panel" CornerRadius="12" Margin="60,30,0,30" Padding="30">
+                        <StackPanel Spacing="20">
+                            <TextBlock Text="PROJECT WORKSPACE" FontSize="11" FontWeight="Bold" Foreground="#7C909C" />
+                            <TextBlock Text="Everything a drawing needs, in one transparent folder." FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="14" RowSpacing="16">
+                                <TextBlock Text="01" Foreground="#27A879" FontWeight="Bold" /><TextBlock Grid.Column="1" Text="Human-readable .dfproj and .dfdraw files" />
+                                <TextBlock Grid.Row="1" Text="02" Foreground="#27A879" FontWeight="Bold" /><TextBlock Grid.Row="1" Grid.Column="1" Text="Per-layout grid, snap, zoom and display settings" />
+                                <TextBlock Grid.Row="2" Text="03" Foreground="#27A879" FontWeight="Bold" /><TextBlock Grid.Row="2" Grid.Column="1" Text="Layer styling, visibility, locking and grouping" />
+                                <TextBlock Grid.Row="3" Text="04" Foreground="#27A879" FontWeight="Bold" /><TextBlock Grid.Row="3" Grid.Column="1" Text="Automatic project and drawing history" />
+                            </Grid>
+                            <Border Height="1" Background="#2B353D" Margin="0,6" />
+                            <TextBlock Text="EARLY FOUNDATION" Foreground="#F4B95E" FontSize="11" FontWeight="Bold" />
+                            <TextBlock Text="The first milestone focuses on file integrity, workspace architecture, layers and an extensible 2D viewport." Foreground="#8FA1AD" TextWrapping="Wrap" LineHeight="21" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Grid IsVisible="{Binding IsWorkspaceVisible}" ColumnDefinitions="230,*,270">
+                <!-- Layers -->
+                <Border Classes="panel" BorderThickness="0,0,1,0" Padding="12">
+                    <Grid RowDefinitions="Auto,Auto,*">
+                        <Grid ColumnDefinitions="*,Auto" Margin="4,2,4,10">
+                            <StackPanel><TextBlock Text="LAYERS" FontSize="11" FontWeight="Bold" /><TextBlock Text="Visibility &amp; styling" FontSize="10" Foreground="#71838F" /></StackPanel>
+                            <Button Grid.Column="1" Content="＋" Command="{Binding AddLayerCommand}" Padding="9,4" />
+                        </Grid>
+                        <Grid Grid.Row="1" ColumnDefinitions="28,28,*,52" Margin="0,0,0,4"><TextBlock Grid.Column="2" Text="NAME" FontSize="9" Foreground="#657680" /><TextBlock Grid.Column="3" Text="WEIGHT" FontSize="9" Foreground="#657680" /></Grid>
+                        <ListBox Grid.Row="2" ItemsSource="{Binding Layers}" Background="Transparent" BorderThickness="0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:LayerItemViewModel">
+                                    <Grid ColumnDefinitions="28,28,*,52" Margin="0,3">
+                                        <CheckBox IsChecked="{Binding IsVisible}" ToolTip.Tip="Visible" />
+                                        <CheckBox Grid.Column="1" IsChecked="{Binding IsLocked}" ToolTip.Tip="Locked" />
+                                        <StackPanel Grid.Column="2"><TextBlock Text="{Binding Name}" /><TextBlock Text="{Binding LineType}" FontSize="9" Foreground="#738590" /></StackPanel>
+                                        <TextBlock Grid.Column="3" Text="{Binding LineWeight}" FontSize="9" Foreground="#91A2AC" VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Column="1" Background="#101419">
+                    <controls:DrawingViewport Drawing="{Binding ActiveDrawing}" Layout="{Binding SelectedLayout}" ActiveTool="{Binding ActiveTool}" EntityCreated="Viewport_OnEntityCreated" Focusable="True" />
+                </Border>
+
+                <!-- Properties -->
+                <Border Grid.Column="2" Classes="panel" BorderThickness="1,0,0,0" Padding="16">
+                    <StackPanel Spacing="14">
+                        <TextBlock Text="PROPERTIES" FontSize="11" FontWeight="Bold" />
+                        <Border Height="1" Background="#29333B" />
+                        <TextBlock Text="PROJECT" FontSize="9" Foreground="#6F828E" FontWeight="Bold" />
+                        <TextBlock Text="{Binding SelectedProjectTab.Title}" FontSize="17" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding ProjectSummary}" Foreground="#8FA0AA" TextWrapping="Wrap" />
+                        <TextBlock Text="DRAWING" FontSize="9" Foreground="#6F828E" FontWeight="Bold" Margin="0,8,0,0" />
+                        <TextBlock Text="{Binding SelectedDrawingTab.Document.Name}" FontWeight="SemiBold" />
+                        <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Entities" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding SelectedDrawingTab.Document.Entities.Count}" /></Grid>
+                        <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Units" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding SelectedDrawingTab.Document.Units}" /></Grid>
+                        <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Revision" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding SelectedDrawingTab.Document.Revision}" /></Grid>
+                        <TextBlock Text="LAYOUT" FontSize="9" Foreground="#6F828E" FontWeight="Bold" Margin="0,8,0,0" />
+                        <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Grid spacing" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding SelectedLayout.GridSpacing, StringFormat='{}{0:0.##}'}" /></Grid>
+                        <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Zoom" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding SelectedLayout.Zoom, StringFormat='{}{0:P0}'}" /></Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- Layout bar -->
+        <Border Grid.Row="5" Background="#11171C" BorderBrush="#2B353E" BorderThickness="0,1,0,0" Padding="10,5" IsVisible="{Binding IsWorkspaceVisible}">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <Button Content="＋" Command="{Binding AddLayoutCommand}" Padding="9,4" ToolTip.Tip="New layout" />
+                    <ListBox ItemsSource="{Binding Layouts}" SelectedItem="{Binding SelectedLayout}" Background="Transparent" BorderThickness="0">
+                        <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                        <ListBox.Styles><Style Selector="ListBoxItem"><Setter Property="Padding" Value="13,5" /><Setter Property="CornerRadius" Value="4" /></Style><Style Selector="ListBoxItem:selected"><Setter Property="Background" Value="#276E59" /></Style></ListBox.Styles>
+                        <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+                <TextBlock Grid.Column="1" Text="{Binding StatusText}" Foreground="#81939E" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                    <Button Classes="tool" Content="Grid" Command="{Binding ToggleGridCommand}" />
+                    <Button Classes="tool" Content="Snap" Command="{Binding ToggleSnapCommand}" />
+                    <Border Width="1" Background="#334049" Margin="7,1" />
+                    <TextBlock Text="{Binding SelectedLayout.Zoom, StringFormat='{}{0:P0}'}" Width="48" TextAlignment="Center" VerticalAlignment="Center" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

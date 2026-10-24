@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DatumForge.App/DatumForge.App.csproj" />
+    <Project Path="src/DatumForge.Core/DatumForge.Core.csproj" />
+    <Project Path="src/DatumForge.Infrastructure/DatumForge.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DatumForge.Tests/DatumForge.Tests.csproj" />
+  </Folder>
+</Solution>
