@@ -101,6 +101,20 @@ public sealed class ProjectStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task StandaloneDrawingCanBeSavedDirectly()
+    {
+        var path = Path.Combine(_directory, "Standalone.dfdraw");
+        var drawing = new DrawingDocument { Name = "Standalone", Layers = [new DrawingLayer()] };
+        drawing.Entities.Add(new DrawingEntity { LayerId = drawing.Layers[0].Id });
+
+        await _store.SaveDrawingAsync(path, drawing);
+
+        var loaded = await _store.LoadDrawingAsync(path);
+        Assert.Equal(1, loaded.Revision);
+        Assert.Single(loaded.Entities);
+    }
+
+    [Fact]
     public async Task NewerFormatVersionIsRejected()
     {
         var workspace = await _store.CreateAsync(_directory, "Workshop");

@@ -73,6 +73,15 @@ public sealed class ProjectStore
         TrimHistory(root, workspace.Project.Settings.HistoryLimit);
     }
 
+    public async Task SaveDrawingAsync(string drawingFilePath, DrawingDocument drawing, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(drawingFilePath);
+        ArgumentNullException.ThrowIfNull(drawing);
+        drawing.Revision++;
+        drawing.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        await WriteAtomicAsync(Path.GetFullPath(drawingFilePath), drawing, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<HistoryEntry>> ReadHistoryAsync(string projectFilePath, CancellationToken cancellationToken = default)
     {
         var root = Path.GetDirectoryName(Path.GetFullPath(projectFilePath))!;

@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\DatumForge.App\DatumForge.App.csproj" />
     <ProjectReference Include="..\..\src\DatumForge.Core\DatumForge.Core.csproj" />
     <ProjectReference Include="..\..\src\DatumForge.Infrastructure\DatumForge.Infrastructure.csproj" />
   </ItemGroup>

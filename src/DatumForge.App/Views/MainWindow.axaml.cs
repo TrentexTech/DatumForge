@@ -9,12 +9,15 @@ namespace DatumForge.App.Views;
 
 public partial class MainWindow : Window
 {
+    private bool _closeApproved;
+    private bool _closePromptOpen;
+
     public MainWindow()
     {
         InitializeComponent();
         Opened += (_, _) => RestoreWindowSettings();
         SizeChanged += (_, _) => CaptureNormalWindowSize();
-        Closing += (_, _) => SaveWindowSettings();
+        Closing += MainWindow_OnClosing;
     }
 
     private MainViewModel ViewModel => (MainViewModel)DataContext!;
@@ -34,6 +37,34 @@ public partial class MainWindow : Window
         WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     private void Close_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Close();
+
+    private async void MainWindow_OnClosing(object? sender, WindowClosingEventArgs e)
+    {
+        if (_closeApproved || !ViewModel.HasUnsavedWork)
+        {
+            SaveWindowSettings();
+            return;
+        }
+
+        e.Cancel = true;
+        if (_closePromptOpen) return;
+
+        _closePromptOpen = true;
+        try
+        {
+            var choice = await new UnsavedChangesDialog(ViewModel.UnsavedWorkSummary)
+                .ShowDialog<UnsavedChangesChoice>(this);
+            if (choice == UnsavedChangesChoice.Cancel) return;
+            if (choice == UnsavedChangesChoice.Save && !await ViewModel.SaveAllUnsavedWorkAsync()) return;
+
+            _closeApproved = true;
+            Close();
+        }
+        finally
+        {
+            _closePromptOpen = false;
+        }
+    }
 
     private void RestoreWindowSettings()
     {

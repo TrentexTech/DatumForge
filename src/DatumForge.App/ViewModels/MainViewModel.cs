@@ -14,6 +14,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly UserSettingsStore _userSettingsStore;
     private readonly DrawingEditJournal _editJournal = new();
     private readonly HashSet<Guid> _selectedEntityIds = [];
+    private readonly HashSet<Guid> _dirtyProjectIds = [];
+    private readonly Dictionary<Guid, DrawingTabViewModel> _dirtyStandaloneDrawings = [];
 
     public MainViewModel() : this(new ProjectStore(), new UserSettingsStore()) { }
 
@@ -58,6 +60,22 @@ public partial class MainViewModel : ViewModelBase
     public bool HasRecentProjects => RecentProjects.Count > 0;
     public bool HasRecentDrawings => RecentDrawings.Count > 0;
     public bool HasNoRecentItems => !HasRecentProjects && !HasRecentDrawings;
+    public bool HasUnsavedWork => _dirtyProjectIds.Count > 0 || _dirtyStandaloneDrawings.Count > 0;
+    public string UnsavedWorkSummary
+    {
+        get
+        {
+            var names = ProjectTabs
+                .Where(tab => tab.Workspace is { } workspace && _dirtyProjectIds.Contains(workspace.Project.Id))
+                .Select(tab => tab.Title)
+                .Concat(_dirtyStandaloneDrawings.Values.Select(tab => tab.Document.Name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            return names.Length == 1
+                ? $"{names[0]} has unsaved changes."
+                : $"{names.Length} items have unsaved changes: {string.Join(", ", names)}.";
+        }
+    }
     public DrawingDocument? ActiveDrawing => SelectedDrawingTab?.Document;
     public string WindowTitle => SelectedProjectTab?.Workspace is { } workspace ? $"{workspace.Project.Name} — DatumForge" : "DatumForge";
     public string GridStatus => SelectedLayout?.ShowGrid == true ? "Grid on" : "Grid off";
@@ -141,6 +159,34 @@ public partial class MainViewModel : ViewModelBase
     public Task SaveUserSettingsAsync() => _userSettingsStore.SaveAsync(UserSettings);
 
     public void SaveUserSettings() => _userSettingsStore.Save(UserSettings);
+
+    public async Task<bool> SaveAllUnsavedWorkAsync()
+    {
+        try
+        {
+            foreach (var tab in ProjectTabs.Where(tab => tab.Workspace is { } workspace && _dirtyProjectIds.Contains(workspace.Project.Id)).ToArray())
+            {
+                await _store.SaveAsync(tab.Workspace!);
+                _dirtyProjectIds.Remove(tab.Workspace!.Project.Id);
+            }
+
+            foreach (var tab in _dirtyStandaloneDrawings.Values.ToArray())
+            {
+                await _store.SaveDrawingAsync(tab.SourcePath, tab.Document);
+                _dirtyStandaloneDrawings.Remove(tab.Document.Id);
+            }
+
+            NotifyUnsavedWorkChanged();
+            StatusText = $"Saved all work at {DateTime.Now:t}";
+            return true;
+        }
+        catch (Exception exception)
+        {
+            NotifyUnsavedWorkChanged();
+            StatusText = $"Could not save all work: {exception.Message}";
+            return false;
+        }
+    }
 
     [RelayCommand]
     private async Task OpenRecentProjectAsync(RecentFileEntry? entry)
@@ -283,6 +329,15 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (SelectedDrawingTab is { IsStandalone: true } standaloneTab)
+        {
+            await _store.SaveDrawingAsync(standaloneTab.SourcePath, standaloneTab.Document);
+            _dirtyStandaloneDrawings.Remove(standaloneTab.Document.Id);
+            NotifyUnsavedWorkChanged();
+            StatusText = $"Saved {standaloneTab.Document.Name} revision {standaloneTab.Document.Revision} at {DateTime.Now:t}";
+            return;
+        }
+
         if (SelectedProjectTab?.Workspace is not { } workspace)
         {
             StatusText = "Open a project before saving";
@@ -290,6 +345,8 @@ public partial class MainViewModel : ViewModelBase
         }
 
         await _store.SaveAsync(workspace);
+        _dirtyProjectIds.Remove(workspace.Project.Id);
+        NotifyUnsavedWorkChanged();
         StatusText = $"Saved revision {workspace.Project.Revision} at {DateTime.Now:t}";
         ProjectSummary = BuildSummary(workspace);
     }
@@ -302,6 +359,8 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             await _store.SaveAsync(workspace);
+            _dirtyProjectIds.Remove(workspace.Project.Id);
+            NotifyUnsavedWorkChanged();
             foreach (var drawing in workspace.Drawings.Values)
                 _editJournal.Clear(drawing.Id);
 
@@ -399,6 +458,7 @@ public partial class MainViewModel : ViewModelBase
         workspace.Project.Layouts.Add(layout);
         Layouts.Add(layout);
         SelectedLayout = layout;
+        MarkActiveWorkDirty();
         StatusText = $"Added {layout.Name}";
     }
 
@@ -408,7 +468,8 @@ public partial class MainViewModel : ViewModelBase
         if (ActiveDrawing is null) return;
         var layer = new DrawingLayer { Name = $"Layer {ActiveDrawing.Layers.Count}" };
         ActiveDrawing.Layers.Add(layer);
-        Layers.Add(new LayerItemViewModel(layer));
+        Layers.Add(new LayerItemViewModel(layer, OnLayerChanged));
+        MarkActiveWorkDirty();
         StatusText = $"Added {layer.Name}";
     }
 
@@ -417,6 +478,7 @@ public partial class MainViewModel : ViewModelBase
     {
         if (SelectedLayout is null) return;
         SelectedLayout.ShowGrid = !SelectedLayout.ShowGrid;
+        MarkActiveWorkDirty();
         RefreshLayoutState();
     }
 
@@ -425,6 +487,7 @@ public partial class MainViewModel : ViewModelBase
     {
         if (SelectedLayout is null) return;
         SelectedLayout.SnapToGrid = !SelectedLayout.SnapToGrid;
+        MarkActiveWorkDirty();
         RefreshLayoutState();
     }
 
@@ -433,6 +496,7 @@ public partial class MainViewModel : ViewModelBase
     {
         if (SelectedLayout is null) return;
         SelectedLayout.SnapToObjects = !SelectedLayout.SnapToObjects;
+        MarkActiveWorkDirty();
         RefreshLayoutState();
     }
 
@@ -441,6 +505,7 @@ public partial class MainViewModel : ViewModelBase
 
     private void NotifyDrawingChanged(string status)
     {
+        MarkActiveWorkDirty();
         ViewportRevision++;
         EntityCount = ActiveDrawing?.Entities.Count ?? 0;
         OnPropertyChanged(nameof(SelectedDrawingTab));
@@ -478,6 +543,7 @@ public partial class MainViewModel : ViewModelBase
         if (SelectedLayout is null || HasSnapMode(mode) == enabled) return;
         if (enabled) SelectedLayout.ObjectSnaps |= mode;
         else SelectedLayout.ObjectSnaps &= ~mode;
+        MarkActiveWorkDirty();
         RefreshLayoutState();
     }
 
@@ -533,7 +599,31 @@ public partial class MainViewModel : ViewModelBase
     {
         Layers.Clear();
         if (drawing is null) return;
-        foreach (var layer in drawing.Layers) Layers.Add(new LayerItemViewModel(layer));
+        foreach (var layer in drawing.Layers) Layers.Add(new LayerItemViewModel(layer, OnLayerChanged));
+    }
+
+    private void OnLayerChanged()
+    {
+        MarkActiveWorkDirty();
+        ViewportRevision++;
+    }
+
+    private void MarkActiveWorkDirty()
+    {
+        if (SelectedDrawingTab is { IsStandalone: true } standaloneTab)
+            _dirtyStandaloneDrawings[standaloneTab.Document.Id] = standaloneTab;
+        else if (SelectedProjectTab?.Workspace is { } workspace)
+            _dirtyProjectIds.Add(workspace.Project.Id);
+        else
+            return;
+
+        NotifyUnsavedWorkChanged();
+    }
+
+    private void NotifyUnsavedWorkChanged()
+    {
+        OnPropertyChanged(nameof(HasUnsavedWork));
+        OnPropertyChanged(nameof(UnsavedWorkSummary));
     }
 
     private async Task RememberProjectAsync(string path, string displayName)
@@ -595,7 +685,13 @@ public sealed class DrawingTabViewModel
 
 public partial class LayerItemViewModel : ViewModelBase
 {
-    public LayerItemViewModel(DrawingLayer layer) => Layer = layer;
+    private readonly Action? _onChanged;
+
+    public LayerItemViewModel(DrawingLayer layer, Action? onChanged = null)
+    {
+        Layer = layer;
+        _onChanged = onChanged;
+    }
     public DrawingLayer Layer { get; }
     public string Name => Layer.Name;
     public string Color => Layer.Color;
@@ -603,6 +699,6 @@ public partial class LayerItemViewModel : ViewModelBase
     public string LineWeight => $"{Layer.LineWeightMm:0.00} mm";
     public string Opacity => $"{Layer.Opacity:P0}";
 
-    public bool IsVisible { get => Layer.IsVisible; set { if (Layer.IsVisible == value) return; Layer.IsVisible = value; OnPropertyChanged(); } }
-    public bool IsLocked { get => Layer.IsLocked; set { if (Layer.IsLocked == value) return; Layer.IsLocked = value; OnPropertyChanged(); } }
+    public bool IsVisible { get => Layer.IsVisible; set { if (Layer.IsVisible == value) return; Layer.IsVisible = value; OnPropertyChanged(); _onChanged?.Invoke(); } }
+    public bool IsLocked { get => Layer.IsLocked; set { if (Layer.IsLocked == value) return; Layer.IsLocked = value; OnPropertyChanged(); _onChanged?.Invoke(); } }
 }
