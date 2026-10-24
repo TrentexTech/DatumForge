@@ -8,6 +8,7 @@ public sealed class DrawingEditJournal
 
     public bool CanUndo(Guid drawingId) => StateFor(drawingId).Undo.Count > 0;
     public bool CanRedo(Guid drawingId) => StateFor(drawingId).Redo.Count > 0;
+    public void Clear(Guid drawingId) => _states.Remove(drawingId);
 
     public void RecordEntityAdded(DrawingDocument drawing, DrawingEntity entity)
     {

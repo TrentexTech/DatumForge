@@ -88,6 +88,8 @@ public partial class MainViewModel : ViewModelBase
             if (matchingLayout is not null) SelectedLayout = matchingLayout;
         }
         OnPropertyChanged(nameof(ActiveDrawing));
+        UndoCommand.NotifyCanExecuteChanged();
+        RedoCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnWarningMessageChanged(string? value) => OnPropertyChanged(nameof(HasWarning));
@@ -290,6 +292,30 @@ public partial class MainViewModel : ViewModelBase
         await _store.SaveAsync(workspace);
         StatusText = $"Saved revision {workspace.Project.Revision} at {DateTime.Now:t}";
         ProjectSummary = BuildSummary(workspace);
+    }
+
+    [RelayCommand]
+    private async Task CloseProjectTabAsync(ProjectTabViewModel? tab)
+    {
+        if (tab?.Workspace is not { } workspace || !ProjectTabs.Contains(tab)) return;
+
+        try
+        {
+            await _store.SaveAsync(workspace);
+            foreach (var drawing in workspace.Drawings.Values)
+                _editJournal.Clear(drawing.Id);
+
+            var wasSelected = ReferenceEquals(SelectedProjectTab, tab);
+            var tabIndex = ProjectTabs.IndexOf(tab);
+            ProjectTabs.Remove(tab);
+            if (wasSelected)
+                SelectedProjectTab = ProjectTabs[Math.Max(0, tabIndex - 1)];
+            StatusText = $"Saved and closed {tab.Title}";
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"Could not close {tab.Title}: {exception.Message}";
+        }
     }
 
     [RelayCommand]
@@ -552,6 +578,7 @@ public sealed class ProjectTabViewModel
     public ProjectWorkspace? Workspace { get; }
     public bool IsWelcome { get; }
     public bool IsLooseDrawings { get; }
+    public bool CanClose => Workspace is not null;
 }
 
 public sealed class DrawingTabViewModel

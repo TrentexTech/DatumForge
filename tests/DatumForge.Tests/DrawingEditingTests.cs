@@ -50,6 +50,22 @@ public sealed class EntityHitTesterTests
 public sealed class DrawingEditJournalTests
 {
     [Fact]
+    public void ClearRemovesUndoAndRedoHistory()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        var entity = new DrawingEntity { Kind = EntityKind.Line, LayerId = layer.Id };
+        drawing.Entities.Add(entity);
+        var journal = new DrawingEditJournal();
+        journal.RecordEntityAdded(drawing, entity);
+        journal.Undo(drawing);
+
+        journal.Clear(drawing.Id);
+
+        Assert.False(journal.CanUndo(drawing.Id));
+        Assert.False(journal.CanRedo(drawing.Id));
+    }
+
+    [Fact]
     public void CreatedEntityCanBeUndoneAndRedone()
     {
         var drawing = DrawingWithLayer(out var layer);
