@@ -54,6 +54,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] public partial int SelectedEntityCount { get; set; }
     [ObservableProperty] public partial int ViewportRevision { get; set; }
     [ObservableProperty] public partial string CoordinateInputText { get; set; } = string.Empty;
+    [ObservableProperty] public partial string SelectedRibbonTab { get; set; } = "File";
 
     public bool IsWelcomeVisible => SelectedProjectTab?.IsWelcome != false;
     public bool IsWorkspaceVisible => !IsWelcomeVisible;
@@ -65,6 +66,10 @@ public partial class MainViewModel : ViewModelBase
     public bool CanAddLayersModule => CanAddViewportModule(ViewportModuleKind.Layers);
     public bool CanAddViewerModule => CanAddViewportModule(ViewportModuleKind.Viewer);
     public bool CanAddPropertiesModule => CanAddViewportModule(ViewportModuleKind.Properties);
+    public bool IsFileRibbonTab => SelectedRibbonTab == "File";
+    public bool IsInsertRibbonTab => SelectedRibbonTab == "Insert";
+    public bool IsModifyRibbonTab => SelectedRibbonTab == "Modify";
+    public bool IsViewRibbonTab => SelectedRibbonTab == "View";
     public string UnsavedWorkSummary
     {
         get
@@ -126,6 +131,14 @@ public partial class MainViewModel : ViewModelBase
     partial void OnWarningMessageChanged(string? value) => OnPropertyChanged(nameof(HasWarning));
 
     partial void OnActiveToolChanged(string value) => OnPropertyChanged(nameof(ToolStatus));
+
+    partial void OnSelectedRibbonTabChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsFileRibbonTab));
+        OnPropertyChanged(nameof(IsInsertRibbonTab));
+        OnPropertyChanged(nameof(IsModifyRibbonTab));
+        OnPropertyChanged(nameof(IsViewRibbonTab));
+    }
 
     partial void OnSelectedLayoutChanged(LayoutDefinition? value)
     {
@@ -255,6 +268,12 @@ public partial class MainViewModel : ViewModelBase
         if (ActiveDrawing is null) return;
         _editJournal.RecordEntityAdded(ActiveDrawing, entity);
         NotifyDrawingChanged($"Created {entity.Kind}");
+    }
+
+    [RelayCommand]
+    private void SelectRibbonTab(string? tab)
+    {
+        if (tab is "File" or "Insert" or "Modify" or "View") SelectedRibbonTab = tab;
     }
 
     public void UpdateSelection(IEnumerable<Guid> entityIds)

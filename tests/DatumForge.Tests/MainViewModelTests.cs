@@ -109,6 +109,19 @@ public sealed class MainViewModelTests : IDisposable
         Assert.True(viewModel.HasUnsavedWork);
     }
 
+    [Fact]
+    public void RibbonTabsSwitchTheirVisibleCommandGroup()
+    {
+        var viewModel = new MainViewModel(new ProjectStore(), new UserSettingsStore(Path.Combine(_directory, "settings")));
+        Assert.True(viewModel.IsFileRibbonTab);
+
+        viewModel.SelectRibbonTabCommand.Execute("View");
+
+        Assert.False(viewModel.IsFileRibbonTab);
+        Assert.True(viewModel.IsViewRibbonTab);
+        Assert.Equal("View", viewModel.SelectedRibbonTab);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);

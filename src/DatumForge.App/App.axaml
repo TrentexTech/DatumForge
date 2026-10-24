@@ -42,6 +42,36 @@
         <Style Selector="Button.ribbon-command:disabled">
             <Setter Property="Opacity" Value="0.35" />
         </Style>
+        <Style Selector="Button.ribbon-tab">
+            <Setter Property="Height" Value="31" />
+            <Setter Property="MinWidth" Value="66" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+            <Setter Property="Foreground" Value="#91A2AC" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.ribbon-tab:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#1A232A" />
+            <Setter Property="BorderBrush" Value="#27A879" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+        </Style>
+        <Style Selector="Button.ribbon-tab.active">
+            <Setter Property="Foreground" Value="#F1F6F8" />
+        </Style>
+        <Style Selector="Button.ribbon-tab.active /template/ ContentPresenter">
+            <Setter Property="BorderBrush" Value="#27A879" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+        </Style>
+        <Style Selector="Button.ribbon-tab.active:pointerover /template/ ContentPresenter">
+            <Setter Property="BorderBrush" Value="#27A879" />
+            <Setter Property="BorderThickness" Value="0,0,0,3" />
+        </Style>
         <Style Selector="TextBlock.ribbon-icon">
             <Setter Property="FontSize" Value="22" />
             <Setter Property="FontWeight" Value="SemiBold" />
