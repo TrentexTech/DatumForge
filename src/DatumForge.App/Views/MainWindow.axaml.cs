@@ -26,11 +26,6 @@ public partial class MainWindow : Window
 
     private MainViewModel ViewModel => (MainViewModel)DataContext!;
 
-    private void Viewport_OnEntityCreated(object? sender, EntityCreatedEventArgs e) => ViewModel.RecordEntityCreated(e.Entity);
-    private void Viewport_OnSelectionChanged(object? sender, EntitySelectionChangedEventArgs e) => ViewModel.UpdateSelection(e.EntityIds);
-    private void Viewport_OnTransformRequested(object? sender, EntityTransformRequestedEventArgs e) =>
-        ViewModel.ApplyTransform(e.Kind, e.EntityIds, e.Reference, e.Target);
-
     private void Minimize_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
         WindowState = WindowState.Minimized;
 
@@ -156,7 +151,7 @@ public partial class MainWindow : Window
             CoordinateInput.Focus();
             return;
         }
-        var result = DrawingSurface.SubmitCoordinate(ViewModel.CoordinateInputText);
+        var result = ViewportModulesHost.SubmitCoordinate(ViewModel.CoordinateInputText);
         ViewModel.ReportCoordinateSubmission(result.Success, result.Completed, result.Message);
         if (result.Success) CoordinateInput.Focus();
     }

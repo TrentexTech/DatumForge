@@ -21,7 +21,7 @@ DatumForge.Tests → Core + Infrastructure
 
 ## Important boundaries
 
-- A project owns layout configuration and relative drawing references.
+- A project owns layout configuration—including viewport module order, presence, and sizes—and relative drawing references.
 - A drawing owns geometry and layers and records its associated project ID.
 - Opening a drawing alone never silently claims or rewrites project context.
 - File-format changes require compatibility tests and documentation.

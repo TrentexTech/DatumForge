@@ -54,4 +54,54 @@ public sealed class LayoutDefinition
     public double GridSpacing { get; set; } = 25;
     public double Zoom { get; set; } = 1;
     public CadPoint Pan { get; set; }
+    public List<ViewportModuleDefinition> ViewportModules { get; set; } = ViewportModuleDefinition.CreateDefault();
+
+    public void NormalizeViewportModules()
+    {
+        if (ViewportModules is null)
+        {
+            ViewportModules = ViewportModuleDefinition.CreateDefault();
+            return;
+        }
+
+        var seen = new HashSet<ViewportModuleKind>();
+        ViewportModules = ViewportModules
+            .Where(module => seen.Add(module.Kind))
+            .Select(module =>
+            {
+                module.Size = double.IsFinite(module.Size)
+                    ? Math.Clamp(module.Size, module.Kind == ViewportModuleKind.Viewer ? 320 : 160, 1600)
+                    : ViewportModuleDefinition.DefaultSize(module.Kind);
+                return module;
+            })
+            .ToList();
+
+    }
+}
+
+public enum ViewportModuleKind
+{
+    Layers,
+    Viewer,
+    Properties
+}
+
+public sealed class ViewportModuleDefinition
+{
+    public ViewportModuleKind Kind { get; set; }
+    public double Size { get; set; }
+
+    public static double DefaultSize(ViewportModuleKind kind) => kind switch
+    {
+        ViewportModuleKind.Layers => 230,
+        ViewportModuleKind.Properties => 270,
+        _ => 800
+    };
+
+    public static List<ViewportModuleDefinition> CreateDefault() =>
+    [
+        new() { Kind = ViewportModuleKind.Layers, Size = DefaultSize(ViewportModuleKind.Layers) },
+        new() { Kind = ViewportModuleKind.Viewer, Size = DefaultSize(ViewportModuleKind.Viewer) },
+        new() { Kind = ViewportModuleKind.Properties, Size = DefaultSize(ViewportModuleKind.Properties) }
+    ];
 }

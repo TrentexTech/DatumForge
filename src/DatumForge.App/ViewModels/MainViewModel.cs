@@ -37,6 +37,7 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<DrawingTabViewModel> DrawingTabs { get; } = [];
     public ObservableCollection<LayoutDefinition> Layouts { get; } = [];
     public ObservableCollection<LayerItemViewModel> Layers { get; } = [];
+    public ObservableCollection<ViewportModuleItemViewModel> ViewportModules { get; } = [];
     public ObservableCollection<RecentFileEntry> RecentProjects { get; } = [];
     public ObservableCollection<RecentFileEntry> RecentDrawings { get; } = [];
     public IReadOnlyList<string> DrawingTools { get; } = ["Select", "Line", "Polyline", "Circle", "Rectangle", "Text", "Dimension"];
@@ -61,6 +62,9 @@ public partial class MainViewModel : ViewModelBase
     public bool HasRecentDrawings => RecentDrawings.Count > 0;
     public bool HasNoRecentItems => !HasRecentProjects && !HasRecentDrawings;
     public bool HasUnsavedWork => _dirtyProjectIds.Count > 0 || _dirtyStandaloneDrawings.Count > 0;
+    public bool CanAddLayersModule => CanAddViewportModule(ViewportModuleKind.Layers);
+    public bool CanAddViewerModule => CanAddViewportModule(ViewportModuleKind.Viewer);
+    public bool CanAddPropertiesModule => CanAddViewportModule(ViewportModuleKind.Properties);
     public string UnsavedWorkSummary
     {
         get
@@ -107,6 +111,11 @@ public partial class MainViewModel : ViewModelBase
         if (value?.Document is { } drawing)
         {
             var matchingLayout = Layouts.FirstOrDefault(layout => layout.ActiveDrawingId == drawing.Id);
+            if (matchingLayout is null && value.IsStandalone)
+            {
+                matchingLayout = new LayoutDefinition { Name = drawing.Name, ActiveDrawingId = drawing.Id };
+                Layouts.Add(matchingLayout);
+            }
             if (matchingLayout is not null) SelectedLayout = matchingLayout;
         }
         OnPropertyChanged(nameof(ActiveDrawing));
@@ -118,7 +127,11 @@ public partial class MainViewModel : ViewModelBase
 
     partial void OnActiveToolChanged(string value) => OnPropertyChanged(nameof(ToolStatus));
 
-    partial void OnSelectedLayoutChanged(LayoutDefinition? value) => RefreshLayoutState();
+    partial void OnSelectedLayoutChanged(LayoutDefinition? value)
+    {
+        RefreshViewportModules();
+        RefreshLayoutState();
+    }
 
     public async Task CreateProjectAsync(string directory, string name)
     {
@@ -468,12 +481,16 @@ public partial class MainViewModel : ViewModelBase
             SnapToObjects = SelectedLayout?.SnapToObjects ?? true,
             ObjectSnaps = SelectedLayout?.ObjectSnaps ??
                 (ObjectSnapMode.Endpoint | ObjectSnapMode.Midpoint | ObjectSnapMode.Center | ObjectSnapMode.Intersection),
-            GridSpacing = SelectedLayout?.GridSpacing ?? 25
+            GridSpacing = SelectedLayout?.GridSpacing ?? 25,
+            ViewportModules = SelectedLayout?.ViewportModules
+                .Select(module => new ViewportModuleDefinition { Kind = module.Kind, Size = module.Size })
+                .ToList() ?? ViewportModuleDefinition.CreateDefault()
         };
         workspace.Project.Layouts.Add(layout);
         Layouts.Add(layout);
         SelectedLayout = layout;
         MarkActiveWorkDirty();
+        ProjectSummary = BuildSummary(workspace);
         StatusText = $"Added {layout.Name}";
     }
 
@@ -486,6 +503,56 @@ public partial class MainViewModel : ViewModelBase
         Layers.Add(new LayerItemViewModel(layer, OnLayerChanged));
         MarkActiveWorkDirty();
         StatusText = $"Added {layer.Name}";
+    }
+
+    [RelayCommand]
+    private void AddViewportModule(string? kindName)
+    {
+        if (SelectedLayout is null || !Enum.TryParse<ViewportModuleKind>(kindName, true, out var kind) || !CanAddViewportModule(kind))
+            return;
+
+        var definition = new ViewportModuleDefinition { Kind = kind, Size = ViewportModuleDefinition.DefaultSize(kind) };
+        SelectedLayout.ViewportModules.Add(definition);
+        ViewportModules.Add(new ViewportModuleItemViewModel(this, definition));
+        UpdateViewportModulePositions();
+        NotifyViewportModuleAvailabilityChanged();
+        MarkActiveWorkDirty();
+        StatusText = $"Added {kind} module to {SelectedLayout.Name}";
+    }
+
+    [RelayCommand]
+    private void RemoveViewportModule(ViewportModuleItemViewModel? module)
+    {
+        if (SelectedLayout is null || module is null || !ViewportModules.Remove(module)) return;
+        SelectedLayout.ViewportModules.Remove(module.Definition);
+        UpdateViewportModulePositions();
+        NotifyViewportModuleAvailabilityChanged();
+        MarkActiveWorkDirty();
+        StatusText = $"Removed {module.Title} module from {SelectedLayout.Name}";
+    }
+
+    [RelayCommand]
+    private void MoveViewportModuleLeft(ViewportModuleItemViewModel? module) => MoveViewportModule(module, -1);
+
+    [RelayCommand]
+    private void MoveViewportModuleRight(ViewportModuleItemViewModel? module) => MoveViewportModule(module, 1);
+
+    public void PersistViewportModuleSizes(IEnumerable<(ViewportModuleItemViewModel Module, double Size)> sizes)
+    {
+        if (SelectedLayout is null) return;
+        var changed = false;
+        foreach (var (module, size) in sizes)
+        {
+            var minimum = module.IsViewer ? 320 : 160;
+            var normalized = Math.Clamp(size, minimum, 1600);
+            if (Math.Abs(module.Definition.Size - normalized) < 0.5) continue;
+            module.Definition.Size = normalized;
+            changed = true;
+        }
+
+        if (!changed) return;
+        MarkActiveWorkDirty();
+        StatusText = $"Resized modules in {SelectedLayout.Name}";
     }
 
     [RelayCommand]
@@ -591,6 +658,7 @@ public partial class MainViewModel : ViewModelBase
         DrawingTabs.Clear();
         Layouts.Clear();
         Layers.Clear();
+        ViewportModules.Clear();
         SelectedDrawingTab = null;
         SelectedLayout = null;
 
@@ -615,6 +683,53 @@ public partial class MainViewModel : ViewModelBase
         Layers.Clear();
         if (drawing is null) return;
         foreach (var layer in drawing.Layers) Layers.Add(new LayerItemViewModel(layer, OnLayerChanged));
+    }
+
+    private void RefreshViewportModules()
+    {
+        ViewportModules.Clear();
+        if (SelectedLayout is not { } layout)
+        {
+            NotifyViewportModuleAvailabilityChanged();
+            return;
+        }
+
+        layout.NormalizeViewportModules();
+        foreach (var definition in layout.ViewportModules)
+            ViewportModules.Add(new ViewportModuleItemViewModel(this, definition));
+        UpdateViewportModulePositions();
+        NotifyViewportModuleAvailabilityChanged();
+    }
+
+    private bool CanAddViewportModule(ViewportModuleKind kind) =>
+        SelectedLayout is not null && ViewportModules.All(module => module.Definition.Kind != kind);
+
+    private void MoveViewportModule(ViewportModuleItemViewModel? module, int offset)
+    {
+        if (SelectedLayout is null || module is null) return;
+        var currentIndex = ViewportModules.IndexOf(module);
+        var targetIndex = currentIndex + offset;
+        if (currentIndex < 0 || targetIndex < 0 || targetIndex >= ViewportModules.Count) return;
+
+        ViewportModules.Move(currentIndex, targetIndex);
+        SelectedLayout.ViewportModules.RemoveAt(currentIndex);
+        SelectedLayout.ViewportModules.Insert(targetIndex, module.Definition);
+        UpdateViewportModulePositions();
+        MarkActiveWorkDirty();
+        StatusText = $"Moved {module.Title} module in {SelectedLayout.Name}";
+    }
+
+    private void UpdateViewportModulePositions()
+    {
+        for (var index = 0; index < ViewportModules.Count; index++)
+            ViewportModules[index].UpdatePosition(index, ViewportModules.Count);
+    }
+
+    private void NotifyViewportModuleAvailabilityChanged()
+    {
+        OnPropertyChanged(nameof(CanAddLayersModule));
+        OnPropertyChanged(nameof(CanAddViewerModule));
+        OnPropertyChanged(nameof(CanAddPropertiesModule));
     }
 
     private void OnLayerChanged()
@@ -722,4 +837,30 @@ public partial class LayerItemViewModel : ViewModelBase
 
     public bool IsVisible { get => Layer.IsVisible; set { if (Layer.IsVisible == value) return; Layer.IsVisible = value; OnPropertyChanged(); _onChanged?.Invoke(); } }
     public bool IsLocked { get => Layer.IsLocked; set { if (Layer.IsLocked == value) return; Layer.IsLocked = value; OnPropertyChanged(); _onChanged?.Invoke(); } }
+}
+
+public sealed class ViewportModuleItemViewModel : ViewModelBase
+{
+    public ViewportModuleItemViewModel(MainViewModel owner, ViewportModuleDefinition definition)
+    {
+        Owner = owner;
+        Definition = definition;
+    }
+
+    public MainViewModel Owner { get; }
+    public ViewportModuleDefinition Definition { get; }
+    public string Title => Definition.Kind.ToString().ToUpperInvariant();
+    public bool IsLayers => Definition.Kind == ViewportModuleKind.Layers;
+    public bool IsViewer => Definition.Kind == ViewportModuleKind.Viewer;
+    public bool IsProperties => Definition.Kind == ViewportModuleKind.Properties;
+    public bool CanMoveLeft { get; private set; }
+    public bool CanMoveRight { get; private set; }
+
+    public void UpdatePosition(int index, int count)
+    {
+        CanMoveLeft = index > 0;
+        CanMoveRight = index < count - 1;
+        OnPropertyChanged(nameof(CanMoveLeft));
+        OnPropertyChanged(nameof(CanMoveRight));
+    }
 }

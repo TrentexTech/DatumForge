@@ -1,0 +1,94 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DatumForge.App.ViewModels"
+             xmlns:controls="using:DatumForge.App.Controls"
+             x:Class="DatumForge.App.Controls.ViewportModuleView"
+             x:DataType="vm:ViewportModuleItemViewModel">
+    <Grid RowDefinitions="32,*">
+        <Border Background="#151D23" BorderBrush="#2B353D" BorderThickness="0,0,0,1" Padding="10,0">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="2">
+                <TextBlock Text="{Binding Title}" FontSize="10" FontWeight="Bold" Foreground="#91A4AF" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Classes="module-action" Content="←"
+                        Command="{Binding Owner.MoveViewportModuleLeftCommand}" CommandParameter="{Binding}"
+                        IsEnabled="{Binding CanMoveLeft}" ToolTip.Tip="Move module left" />
+                <Button Grid.Column="2" Classes="module-action" Content="→"
+                        Command="{Binding Owner.MoveViewportModuleRightCommand}" CommandParameter="{Binding}"
+                        IsEnabled="{Binding CanMoveRight}" ToolTip.Tip="Move module right" />
+                <Button Grid.Column="3" Classes="module-action" Content="×"
+                        Command="{Binding Owner.RemoveViewportModuleCommand}" CommandParameter="{Binding}"
+                        ToolTip.Tip="Remove module" />
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Classes="panel" BorderThickness="0" Padding="12" IsVisible="{Binding IsLayers}">
+            <Grid RowDefinitions="Auto,Auto,*">
+                <Grid ColumnDefinitions="*,Auto" Margin="4,2,4,10">
+                    <StackPanel>
+                        <TextBlock Text="LAYERS" FontSize="11" FontWeight="Bold" />
+                        <TextBlock Text="Visibility &amp; styling" FontSize="10" Foreground="#71838F" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="＋" Command="{Binding Owner.AddLayerCommand}" Padding="9,4" />
+                </Grid>
+                <Grid Grid.Row="1" ColumnDefinitions="28,28,*,52" Margin="0,0,0,4">
+                    <TextBlock Grid.Column="2" Text="NAME" FontSize="9" Foreground="#657680" />
+                    <TextBlock Grid.Column="3" Text="WEIGHT" FontSize="9" Foreground="#657680" />
+                </Grid>
+                <ListBox Grid.Row="2" ItemsSource="{Binding Owner.Layers}" Background="Transparent" BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LayerItemViewModel">
+                            <Grid ColumnDefinitions="28,28,*,52" Margin="0,3">
+                                <CheckBox IsChecked="{Binding IsVisible}" ToolTip.Tip="Visible" />
+                                <CheckBox Grid.Column="1" IsChecked="{Binding IsLocked}" ToolTip.Tip="Locked" />
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="{Binding Name}" />
+                                    <TextBlock Text="{Binding LineType}" FontSize="9" Foreground="#738590" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="3" Text="{Binding LineWeight}" FontSize="9" Foreground="#91A2AC" VerticalAlignment="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Background="#101419" IsVisible="{Binding IsViewer}">
+            <controls:DrawingViewport x:Name="DrawingSurface"
+                                      Drawing="{Binding Owner.ActiveDrawing}"
+                                      Layout="{Binding Owner.SelectedLayout}"
+                                      ActiveTool="{Binding Owner.ActiveTool}"
+                                      RevisionToken="{Binding Owner.ViewportRevision}"
+                                      EntityCreated="Viewport_OnEntityCreated"
+                                      SelectionChanged="Viewport_OnSelectionChanged"
+                                      TransformRequested="Viewport_OnTransformRequested"
+                                      Focusable="True" />
+        </Border>
+
+        <Border Grid.Row="1" Classes="panel" BorderThickness="0" Padding="16" IsVisible="{Binding IsProperties}">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="PROPERTIES" FontSize="11" FontWeight="Bold" />
+                    <Border Height="1" Background="#29333B" />
+                    <TextBlock Text="PROJECT" FontSize="9" Foreground="#6F828E" FontWeight="Bold" />
+                    <TextBlock Text="{Binding Owner.SelectedProjectTab.Title}" FontSize="17" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Owner.ProjectSummary}" Foreground="#8FA0AA" TextWrapping="Wrap" />
+                    <TextBlock Text="DRAWING" FontSize="9" Foreground="#6F828E" FontWeight="Bold" Margin="0,8,0,0" />
+                    <TextBlock Text="{Binding Owner.SelectedDrawingTab.Document.Name}" FontWeight="SemiBold" />
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Entities" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding Owner.EntityCount}" /></Grid>
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Selected" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding Owner.SelectedEntityCount}" /></Grid>
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Units" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding Owner.SelectedDrawingTab.Document.Units}" /></Grid>
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Revision" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding Owner.SelectedDrawingTab.Document.Revision}" /></Grid>
+                    <TextBlock Text="LAYOUT" FontSize="9" Foreground="#6F828E" FontWeight="Bold" Margin="0,8,0,0" />
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Grid spacing" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding Owner.SelectedLayout.GridSpacing, StringFormat='{}{0:0.##}'}" /></Grid>
+                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Zoom" Foreground="#8FA0AA" /><TextBlock Grid.Column="1" Text="{Binding Owner.SelectedLayout.Zoom, StringFormat='{}{0:P0}'}" /></Grid>
+                    <TextBlock Text="OBJECT SNAPS" FontSize="9" Foreground="#6F828E" FontWeight="Bold" Margin="0,8,0,0" />
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+                        <CheckBox Content="Endpoint" IsChecked="{Binding Owner.SnapEndpointEnabled}" />
+                        <CheckBox Grid.Column="1" Content="Midpoint" IsChecked="{Binding Owner.SnapMidpointEnabled}" />
+                        <CheckBox Grid.Row="1" Content="Center" IsChecked="{Binding Owner.SnapCenterEnabled}" />
+                        <CheckBox Grid.Row="1" Grid.Column="1" Content="Intersection" IsChecked="{Binding Owner.SnapIntersectionEnabled}" />
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

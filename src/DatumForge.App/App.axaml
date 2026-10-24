@@ -92,6 +92,21 @@
         <Style Selector="Button.tab-close:pressed /template/ ContentPresenter">
             <Setter Property="Background" Value="#1D4E40" />
         </Style>
+        <Style Selector="Button.module-action">
+            <Setter Property="Width" Value="25" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="3" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="#AAB8C0" />
+            <Setter Property="CornerRadius" Value="3" />
+        </Style>
+        <Style Selector="Button.module-action:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#2B3740" />
+        </Style>
+        <Style Selector="Button.module-action:disabled">
+            <Setter Property="Opacity" Value="0.25" />
+        </Style>
         <Style Selector="Button.caption">
             <Setter Property="Width" Value="46" />
             <Setter Property="Height" Value="35" />

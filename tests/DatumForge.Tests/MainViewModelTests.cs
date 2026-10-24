@@ -77,6 +77,38 @@ public sealed class MainViewModelTests : IDisposable
         Assert.False(File.Exists(settingsStore.SettingsFilePath));
     }
 
+    [Fact]
+    public async Task ViewportModulesAreLayoutSpecificAndReorderable()
+    {
+        var store = new ProjectStore();
+        var workspace = await store.CreateAsync(Path.Combine(_directory, "modules"), "Modular");
+        var viewModel = new MainViewModel(store, new UserSettingsStore(Path.Combine(_directory, "settings")));
+        await viewModel.OpenProjectAsync(workspace.ProjectFilePath);
+
+        var layers = viewModel.ViewportModules.Single(module => module.IsLayers);
+        viewModel.RemoveViewportModuleCommand.Execute(layers);
+        Assert.False(viewModel.CanAddViewerModule);
+        Assert.True(viewModel.CanAddLayersModule);
+
+        viewModel.AddViewportModuleCommand.Execute("Layers");
+        var restoredLayers = viewModel.ViewportModules.Single(module => module.IsLayers);
+        viewModel.MoveViewportModuleLeftCommand.Execute(restoredLayers);
+        viewModel.MoveViewportModuleLeftCommand.Execute(restoredLayers);
+
+        Assert.Equal([ViewportModuleKind.Layers, ViewportModuleKind.Viewer, ViewportModuleKind.Properties],
+            viewModel.SelectedLayout!.ViewportModules.Select(module => module.Kind));
+
+        var modelLayout = viewModel.SelectedLayout;
+        viewModel.AddLayoutCommand.Execute(null);
+        var layoutLayers = viewModel.ViewportModules.Single(module => module.IsLayers);
+        viewModel.RemoveViewportModuleCommand.Execute(layoutLayers);
+        Assert.DoesNotContain(viewModel.ViewportModules, module => module.IsLayers);
+
+        viewModel.SelectedLayout = modelLayout;
+        Assert.Contains(viewModel.ViewportModules, module => module.IsLayers);
+        Assert.True(viewModel.HasUnsavedWork);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);

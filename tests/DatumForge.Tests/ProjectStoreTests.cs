@@ -61,6 +61,11 @@ public sealed class ProjectStoreTests : IDisposable
         var layout = Assert.Single(workspace.Project.Layouts);
         layout.SnapToObjects = false;
         layout.ObjectSnaps = ObjectSnapMode.Endpoint | ObjectSnapMode.Center;
+        layout.ViewportModules =
+        [
+            new() { Kind = ViewportModuleKind.Viewer, Size = 720 },
+            new() { Kind = ViewportModuleKind.Layers, Size = 310 }
+        ];
         drawing.Entities.Add(new DrawingEntity { Kind = EntityKind.Line, LayerId = layer.Id, Points = [new(1, 2), new(3, 4)] });
         await _store.SaveAsync(workspace);
 
@@ -75,6 +80,8 @@ public sealed class ProjectStoreTests : IDisposable
         var loadedLayout = Assert.Single(loaded.Project.Layouts);
         Assert.False(loadedLayout.SnapToObjects);
         Assert.Equal(ObjectSnapMode.Endpoint | ObjectSnapMode.Center, loadedLayout.ObjectSnaps);
+        Assert.Equal([ViewportModuleKind.Viewer, ViewportModuleKind.Layers], loadedLayout.ViewportModules.Select(module => module.Kind));
+        Assert.Equal(310, loadedLayout.ViewportModules[1].Size);
     }
 
     [Fact]
@@ -98,6 +105,18 @@ public sealed class ProjectStoreTests : IDisposable
         await _store.SaveAsync(workspace);
         Assert.Equal(initialProjectRevision + 1, workspace.Project.Revision);
         Assert.Equal(initialDrawingRevision + 1, drawing.Revision);
+    }
+
+    [Fact]
+    public async Task LayoutCanPersistWithEveryViewportModuleRemoved()
+    {
+        var workspace = await _store.CreateAsync(_directory, "EmptyModules");
+        Assert.Single(workspace.Project.Layouts).ViewportModules.Clear();
+
+        await _store.SaveAsync(workspace);
+
+        var loaded = await _store.LoadProjectAsync(workspace.ProjectFilePath);
+        Assert.Empty(Assert.Single(loaded.Project.Layouts).ViewportModules);
     }
 
     [Fact]

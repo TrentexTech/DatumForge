@@ -44,6 +44,7 @@ public sealed class ProjectStore
     {
         var project = await ReadAsync<ProjectDocument>(projectFilePath, cancellationToken);
         ValidateVersion(project.FormatVersion, ProjectDocument.CurrentFormatVersion, "project");
+        foreach (var layout in project.Layouts) layout.NormalizeViewportModules();
         var root = Path.GetDirectoryName(Path.GetFullPath(projectFilePath))!;
         var drawings = new Dictionary<Guid, DrawingDocument>();
         foreach (var reference in project.Drawings)

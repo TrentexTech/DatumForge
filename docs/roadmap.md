@@ -4,6 +4,7 @@
 
 - project/drawing formats, history, layouts, layers, workspace shell
 - per-user settings, window state, and recent projects/drawings — complete
+- layout-specific viewport modules with resizing, reordering, removal, and restoration — complete
 - basic viewport rendering and primitive creation
 - cross-platform build and test automation
 
