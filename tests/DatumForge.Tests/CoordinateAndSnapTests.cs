@@ -33,6 +33,28 @@ public sealed class CoordinateParserTests
         Assert.False(CoordinateParser.TryResolve("@2,3", null, out _, out var error));
         Assert.Contains("reference", error, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Theory]
+    [InlineData(null, "Enter a coordinate")]
+    [InlineData("", "Enter a coordinate")]
+    [InlineData("one,two", "Absolute coordinates")]
+    [InlineData("1,2,3", "Absolute coordinates")]
+    public void InvalidAbsoluteCoordinatesExplainExpectedSyntax(string? input, string expectedError)
+    {
+        Assert.False(CoordinateParser.TryResolve(input, null, out _, out var error));
+        Assert.Contains(expectedError, error, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("@bad,2")]
+    [InlineData("@1")]
+    [InlineData("@-2<45")]
+    [InlineData("@2<bad")]
+    public void InvalidRelativeCoordinatesAreRejected(string input)
+    {
+        Assert.False(CoordinateParser.TryResolve(input, default(CadPoint), out _, out var error));
+        Assert.False(string.IsNullOrWhiteSpace(error));
+    }
 }
 
 public sealed class ObjectSnapperTests

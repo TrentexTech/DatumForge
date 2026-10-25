@@ -146,6 +146,62 @@ public sealed class DrawingViewportRectangleTests
     }
 }
 
+public sealed class DrawingViewportBasicEntityTests
+{
+    [Theory]
+    [InlineData("Line", EntityKind.Line)]
+    [InlineData("Circle", EntityKind.Circle)]
+    public void CoordinateInputCreatesTwoPointEntities(string tool, EntityKind expectedKind)
+    {
+        var layer = new DrawingLayer();
+        var drawing = new DrawingDocument { Layers = [layer] };
+        var viewport = new DrawingViewport { Drawing = drawing, ActiveTool = tool };
+
+        Assert.False(viewport.SubmitCoordinate("1,2").Completed);
+        var completed = viewport.SubmitCoordinate("4,6");
+
+        Assert.True(completed.Completed);
+        var entity = Assert.Single(drawing.Entities);
+        Assert.Equal(expectedKind, entity.Kind);
+        Assert.Equal([new CadPoint(1, 2), new CadPoint(4, 6)], entity.Points);
+        Assert.Equal(5, entity.Radius);
+    }
+
+    [Fact]
+    public void CoordinateInputCreatesThreePointArc()
+    {
+        var layer = new DrawingLayer();
+        var drawing = new DrawingDocument { Layers = [layer] };
+        var viewport = new DrawingViewport { Drawing = drawing, ActiveTool = "Arc" };
+
+        Assert.False(viewport.SubmitCoordinate("-5,0").Completed);
+        Assert.False(viewport.SubmitCoordinate("0,5").Completed);
+        var completed = viewport.SubmitCoordinate("5,0");
+
+        Assert.True(completed.Completed);
+        var arc = Assert.Single(drawing.Entities);
+        Assert.Equal(EntityKind.Arc, arc.Kind);
+        Assert.Equal([new CadPoint(-5, 0), new CadPoint(0, 5), new CadPoint(5, 0)], arc.Points);
+    }
+
+    [Fact]
+    public void CoordinateInputRequiresDrawingToolAndEditableLayer()
+    {
+        var viewport = new DrawingViewport();
+        Assert.False(viewport.SubmitCoordinate("1,2").Success);
+
+        var drawing = new DrawingDocument { Layers = [new DrawingLayer { IsLocked = true }] };
+        viewport.Drawing = drawing;
+        viewport.ActiveTool = "Line";
+        viewport.SubmitCoordinate("0,0");
+        var result = viewport.SubmitCoordinate("1,1");
+
+        Assert.False(result.Success);
+        Assert.Contains("unlocked layer", result.Message, StringComparison.Ordinal);
+        Assert.Empty(drawing.Entities);
+    }
+}
+
 public sealed class DrawingViewportDimensionTests
 {
     [Fact]

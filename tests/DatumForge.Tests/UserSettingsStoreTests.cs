@@ -111,6 +111,31 @@ public sealed class UserSettingsStoreTests : IDisposable
         Assert.Single(Directory.EnumerateFiles(_directory, "settings.invalid-*.json"));
     }
 
+    [Fact]
+    public void SynchronousLoadPreservesUnsupportedSettingsForRecovery()
+    {
+        Directory.CreateDirectory(_directory);
+        var store = new UserSettingsStore(_directory);
+        File.WriteAllText(store.SettingsFilePath, "{\"formatVersion\":999}");
+
+        var loaded = store.Load();
+
+        Assert.Equal(UserSettings.CurrentFormatVersion, loaded.FormatVersion);
+        Assert.NotNull(store.RecoveryNotice);
+        Assert.False(File.Exists(store.SettingsFilePath));
+        Assert.Single(Directory.EnumerateFiles(_directory, "settings.invalid-*.json"));
+    }
+
+    [Fact]
+    public async Task SaveRejectsNullSettingsWithoutCreatingDataDirectory()
+    {
+        var store = new UserSettingsStore(_directory);
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() => store.SaveAsync(null!));
+
+        Assert.False(Directory.Exists(_directory));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);

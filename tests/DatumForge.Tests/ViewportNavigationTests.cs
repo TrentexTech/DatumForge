@@ -42,6 +42,26 @@ public sealed class ViewportNavigationTests
         Assert.Equal(ViewportNavigation.MinimumZoom, zoomedOut.Zoom);
     }
 
+    [Fact]
+    public void PanUsesMinimumZoomWhenStoredZoomIsInvalidlySmall()
+    {
+        var pan = ViewportNavigation.PanByPixels(default, 5, -5, 0);
+
+        Assert.Equal(new CadPoint(100, 100), pan);
+    }
+
+    [Fact]
+    public void ZeroWheelDeltaLeavesViewUnchanged()
+    {
+        var originalPan = new CadPoint(4, -7);
+
+        var view = ViewportNavigation.ZoomAt(originalPan, 2, 0, 700, 200, 1000, 600);
+
+        Assert.Equal(2, view.Zoom);
+        Assert.Equal(originalPan.X, view.Pan.X, 10);
+        Assert.Equal(originalPan.Y, view.Pan.Y, 10);
+    }
+
     private static CadPoint ScreenToWorld(
         double x,
         double y,

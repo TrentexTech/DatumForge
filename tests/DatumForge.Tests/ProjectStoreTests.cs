@@ -272,6 +272,30 @@ public sealed class ProjectStoreTests : IDisposable
         Assert.Equal(330, text.TextRotationDegrees);
     }
 
+    [Fact]
+    public async Task ProjectDrawingPathsCannotEscapeProjectDirectory()
+    {
+        var workspace = await _store.CreateAsync(_directory, "Contained");
+        Assert.Single(workspace.Project.Drawings).RelativePath = "../outside.dfdraw";
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => _store.SaveAsync(workspace));
+
+        Assert.Contains("escapes the project directory", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task HistoryCanBeDisabledAndMissingHistoryReadsAsEmpty()
+    {
+        var workspace = await _store.CreateAsync(_directory, "NoHistory");
+        workspace.Project.Settings.CreateHistoryOnSave = false;
+
+        Assert.Empty(await _store.ReadHistoryAsync(workspace.ProjectFilePath));
+        await _store.SaveAsync(workspace);
+
+        Assert.Empty(await _store.ReadHistoryAsync(workspace.ProjectFilePath));
+        Assert.False(Directory.Exists(Path.Combine(_directory, ".datumforge")));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);
