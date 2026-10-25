@@ -10,4 +10,6 @@ public sealed class DrawingEntity
     public List<CadPoint> Points { get; set; } = [];
     public double Radius { get; set; }
     public string? Text { get; set; }
+    public double TextHeight { get; set; }
+    public double TextRotationDegrees { get; set; }
 }

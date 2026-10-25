@@ -73,13 +73,18 @@ public static class EntityRectangleSelector
     }
 
     private static CadPoint[] GeometryPoints(DrawingEntity entity) =>
-        entity.Kind == EntityKind.Rectangle ? RectangleGeometry.Corners(entity.Points) : [.. entity.Points];
+        entity.Kind switch
+        {
+            EntityKind.Rectangle => RectangleGeometry.Corners(entity.Points),
+            EntityKind.Text => TextGeometry.Corners(entity),
+            _ => [.. entity.Points]
+        };
 
     private static IEnumerable<Segment> Segments(DrawingEntity entity, IReadOnlyList<CadPoint> points)
     {
         for (var index = 1; index < points.Count; index++)
             yield return new Segment(points[index - 1], points[index]);
-        if (entity.Kind == EntityKind.Rectangle && points.Count > 2)
+        if (entity.Kind is (EntityKind.Rectangle or EntityKind.Text) && points.Count > 2)
             yield return new Segment(points[^1], points[0]);
     }
 

@@ -164,7 +164,7 @@
                                     <Button Classes="ribbon-command" Width="52" Command="{Binding SelectToolCommand}" CommandParameter="Circle" ToolTip.Tip="Draw a circle" AutomationProperties.Name="Circle"><StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="○" /><TextBlock Classes="ribbon-command-label" Text="Circle" /></StackPanel></Button>
                                     <Button Classes="ribbon-command" Width="48" Command="{Binding SelectToolCommand}" CommandParameter="Arc" ToolTip.Tip="Draw a three-point arc" AutomationProperties.Name="Arc"><StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="⌒" /><TextBlock Classes="ribbon-command-label" Text="Arc" /></StackPanel></Button>
                                     <Button Classes="ribbon-command" Width="66" Command="{Binding SelectToolCommand}" CommandParameter="Rectangle" ToolTip.Tip="Draw a rectangle" AutomationProperties.Name="Rectangle"><StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="▭" /><TextBlock Classes="ribbon-command-label" Text="Rectangle" /></StackPanel></Button>
-                                    <Button Classes="ribbon-command" Width="48" Command="{Binding SelectToolCommand}" CommandParameter="Text" ToolTip.Tip="Add text" AutomationProperties.Name="Text"><StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="T" /><TextBlock Classes="ribbon-command-label" Text="Text" /></StackPanel></Button>
+                                    <Button Classes="ribbon-command" Width="48" Command="{Binding SelectToolCommand}" CommandParameter="Text" ToolTip.Tip="Place model-space text" AutomationProperties.Name="Text"><StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="T" /><TextBlock Classes="ribbon-command-label" Text="Text" /></StackPanel></Button>
                                     <Button Classes="ribbon-command" Width="68" Command="{Binding SelectToolCommand}" CommandParameter="Dimension" ToolTip.Tip="Measure the aligned distance between two points" AutomationProperties.Name="Dimension"><StackPanel Spacing="2"><TextBlock Classes="ribbon-icon" Text="↔" /><TextBlock Classes="ribbon-command-label" Text="Dimension" /></StackPanel></Button>
                                 </StackPanel>
                                 <TextBlock Grid.Row="1" Classes="ribbon-group-label" Text="DRAW" />
@@ -362,6 +362,7 @@
 
             <controls:ViewportModuleHost x:Name="ViewportModulesHost"
                                          IsVisible="{Binding IsWorkspaceVisible}"
+                                         TextEntryRequested="ViewportModulesHost_OnTextEntryRequested"
                                          ItemsSource="{Binding ViewportModules}" />
         </Grid>
 
@@ -373,7 +374,7 @@
                     <TextBox x:Name="CoordinateInput"
                              Grid.Column="1"
                              Text="{Binding CoordinateInputText}"
-                             PlaceholderText="Coordinate: 100,50 · @25,-10 · @50&lt;30"
+                             PlaceholderText="Command, coordinate, or text content"
                              KeyDown="CoordinateInput_OnKeyDown"
                              Padding="8,4" />
                     <Button Grid.Column="2" Content="Enter" Click="CoordinateSubmit_OnClick" Padding="12,4" />

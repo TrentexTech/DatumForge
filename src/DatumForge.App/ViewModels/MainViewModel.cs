@@ -469,6 +469,7 @@ public partial class MainViewModel : ViewModelBase
             "Mirror" => "Mirror: choose two distinct points on the reflection axis",
             "Arc" => "Arc: choose the start, a point on the arc, and the end point",
             "Dimension" => "Dimension: choose two points to measure their aligned distance",
+            "Text" => "Text: choose an insertion point, then enter content in the command bar",
             _ => $"{ActiveTool}: click in the viewport to draw"
         };
     }

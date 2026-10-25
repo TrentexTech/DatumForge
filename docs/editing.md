@@ -42,6 +42,8 @@ The **Polyline** tool keeps accepting vertices and previews both its committed s
 
 The **Dimension** tool measures the aligned distance between two distinct points. The live preview and finished object show the dimension line, endpoint witness marks, inward arrowheads, and a measurement label using the drawing's current units. Dimension labels are recalculated from their geometry, so move, rotate, mirror, and scale operations keep the displayed value accurate.
 
+The **Text** tool first accepts an insertion point, then focuses the command bar for literal text content. Press **Enter** to create the text or **Escape** to cancel. Content that matches a command name, such as `line`, remains text while an insertion point is active. Text has model-space height and rotation, participates in click/window/crossing selection across its visible bounds, and follows move, copy, rotate, scale, mirror, undo, and redo operations.
+
 ## Command and coordinate entry
 
 The narrow command bar below the viewport accepts tool names and precise points. Press **Enter** or click the arrow button to submit an entry.
@@ -51,6 +53,8 @@ The narrow command bar below the viewport accepts tool names and precise points.
 - Relative polar point: `@50<30` (distance 50 at 30 degrees)
 
 Relative points use the active tool's current reference point as their origin—the previous vertex while drawing a polyline. Typed coordinates are exact and therefore do not pass through grid or object snapping.
+
+While the Text tool is waiting for content, the command bar accepts the entry literally instead of interpreting it as a command or coordinate.
 
 For a polyline, submit each vertex as a coordinate and then submit an empty command line to finish it.
 

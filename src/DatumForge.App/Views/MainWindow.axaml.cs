@@ -160,9 +160,15 @@ public partial class MainWindow : Window
 
     private void CoordinateSubmit_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SubmitCoordinate();
 
+    private void ViewportModulesHost_OnTextEntryRequested(object? sender, EventArgs e)
+    {
+        CoordinateInput.Focus();
+        CoordinateInput.SelectAll();
+    }
+
     private void SubmitCoordinate()
     {
-        if (ViewModel.TryExecuteTextCommand(ViewModel.CoordinateInputText))
+        if (!ViewportModulesHost.IsAwaitingTextEntry && ViewModel.TryExecuteTextCommand(ViewModel.CoordinateInputText))
         {
             CoordinateInput.Focus();
             return;

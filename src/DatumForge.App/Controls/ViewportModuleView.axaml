@@ -65,6 +65,7 @@
                                           ViewChanged="Viewport_OnViewChanged"
                                           InteractionCancelled="Viewport_OnInteractionCancelled"
                                           SelectToolRequested="Viewport_OnSelectToolRequested"
+                                          TextEntryRequested="Viewport_OnTextEntryRequested"
                                           Focusable="True" />
                 <Border HorizontalAlignment="Right"
                         VerticalAlignment="Bottom"

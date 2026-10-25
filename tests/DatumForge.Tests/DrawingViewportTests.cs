@@ -182,3 +182,47 @@ public sealed class DrawingViewportDimensionTests
         Assert.Equal([new CadPoint(2, 2), new CadPoint(5, 6)], Assert.Single(drawing.Entities).Points);
     }
 }
+
+public sealed class DrawingViewportTextTests
+{
+    [Fact]
+    public void CoordinateInputSetsInsertionPointThenCreatesLiteralText()
+    {
+        var layer = new DrawingLayer();
+        var drawing = new DrawingDocument { Layers = [layer] };
+        var viewport = new DrawingViewport { Drawing = drawing, ActiveTool = "Text" };
+        var textRequests = 0;
+        viewport.TextEntryRequested += (_, _) => textRequests++;
+
+        var insertion = viewport.SubmitCoordinate("10,20");
+        var completed = viewport.SubmitCoordinate("line");
+
+        Assert.True(insertion.Success);
+        Assert.False(insertion.Completed);
+        Assert.Equal(1, textRequests);
+        Assert.False(viewport.IsAwaitingTextEntry);
+        Assert.True(completed.Completed);
+        var text = Assert.Single(drawing.Entities);
+        Assert.Equal(EntityKind.Text, text.Kind);
+        Assert.Equal("line", text.Text);
+        Assert.Equal(TextGeometry.DefaultHeight, text.TextHeight);
+        Assert.Equal(new CadPoint(10, 20), Assert.Single(text.Points));
+    }
+
+    [Fact]
+    public void BlankTextIsRejectedWithoutLosingInsertionPoint()
+    {
+        var layer = new DrawingLayer();
+        var drawing = new DrawingDocument { Layers = [layer] };
+        var viewport = new DrawingViewport { Drawing = drawing, ActiveTool = "Text" };
+
+        viewport.SubmitCoordinate("2,3");
+        var rejected = viewport.SubmitCoordinate("  ");
+
+        Assert.False(rejected.Success);
+        Assert.True(viewport.IsAwaitingTextEntry);
+        Assert.Empty(drawing.Entities);
+        Assert.True(viewport.HandleEscape());
+        Assert.False(viewport.IsAwaitingTextEntry);
+    }
+}

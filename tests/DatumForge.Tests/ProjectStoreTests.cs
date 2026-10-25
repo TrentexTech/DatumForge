@@ -1,3 +1,4 @@
+using DatumForge.Core.Editing;
 using DatumForge.Core.Models;
 using DatumForge.Core.Services;
 using DatumForge.Infrastructure.Persistence;
@@ -76,6 +77,15 @@ public sealed class ProjectStoreTests : IDisposable
             Points = [new(-5, 0), new(0, 5), new(5, 0)],
             Radius = 5
         });
+        drawing.Entities.Add(new DrawingEntity
+        {
+            Kind = EntityKind.Text,
+            LayerId = layer.Id,
+            Points = [new(12, 18)],
+            Text = "Workshop",
+            TextHeight = 8,
+            TextRotationDegrees = 30
+        });
         await _store.SaveAsync(workspace);
 
         var loaded = await _store.LoadProjectAsync(workspace.ProjectFilePath);
@@ -86,9 +96,12 @@ public sealed class ProjectStoreTests : IDisposable
         Assert.Equal(0.7, loadedLayer.LineWeightMm);
         Assert.Equal(0.45, loadedLayer.Opacity);
         Assert.Equal("Annotations", loadedLayer.Group);
-        Assert.Equal(2, loadedDrawing.Entities.Count);
+        Assert.Equal(3, loadedDrawing.Entities.Count);
         Assert.Equal(EntityKind.Arc, loadedDrawing.Entities[1].Kind);
         Assert.Equal([new CadPoint(-5, 0), new CadPoint(0, 5), new CadPoint(5, 0)], loadedDrawing.Entities[1].Points);
+        Assert.Equal("Workshop", loadedDrawing.Entities[2].Text);
+        Assert.Equal(8, loadedDrawing.Entities[2].TextHeight);
+        Assert.Equal(30, loadedDrawing.Entities[2].TextRotationDegrees);
         var loadedLayout = Assert.Single(loaded.Project.Layouts);
         Assert.False(loadedLayout.SnapToObjects);
         Assert.True(loadedLayout.PolarTracking);
@@ -225,6 +238,38 @@ public sealed class ProjectStoreTests : IDisposable
         Assert.Equal(
             [new CadPoint(1, 2), new CadPoint(5, 2), new CadPoint(5, 6), new CadPoint(1, 6)],
             Assert.Single(loaded.Entities).Points);
+    }
+
+    [Fact]
+    public async Task SavingLegacyTextAddsDefaultHeightAndNormalizesRotation()
+    {
+        var path = Path.Combine(_directory, "LegacyText.dfdraw");
+        var layer = new DrawingLayer();
+        var drawing = new DrawingDocument
+        {
+            FormatVersion = 3,
+            Layers = [layer],
+            Entities =
+            [
+                new DrawingEntity
+                {
+                    Kind = EntityKind.Text,
+                    LayerId = layer.Id,
+                    Points = [new CadPoint(1, 2)],
+                    Text = "Legacy",
+                    TextHeight = 0,
+                    TextRotationDegrees = -30
+                }
+            ]
+        };
+
+        await _store.SaveDrawingAsync(path, drawing);
+        var loaded = await _store.LoadDrawingAsync(path);
+        var text = Assert.Single(loaded.Entities);
+
+        Assert.Equal(DrawingDocument.CurrentFormatVersion, loaded.FormatVersion);
+        Assert.Equal(TextGeometry.DefaultHeight, text.TextHeight);
+        Assert.Equal(330, text.TextRotationDegrees);
     }
 
     public void Dispose()

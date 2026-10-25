@@ -8,7 +8,7 @@ The project manifest contains a stable project ID, settings and arbitrary proper
 
 ## `.dfdraw`
 
-A drawing contains its stable ID, optional owning project ID, units, layers, and geometry entities. Entities refer to layers by ID. The initial entity schema supports line, polyline, circle, arc, rectangle, text, and dimension kinds using points plus optional radius/text fields. An arc stores three ordered points: start, a point on the arc, and end. A rectangle stores its four ordered corners so rotation and reflection preserve its shape.
+A drawing contains its stable ID, optional owning project ID, units, layers, and geometry entities. Entities refer to layers by ID. The entity schema supports line, polyline, circle, arc, rectangle, text, and dimension kinds using points plus optional geometry fields. An arc stores three ordered points: start, a point on the arc, and end. A rectangle stores its four ordered corners so rotation and reflection preserve its shape. Text stores its content, insertion point, model-space height, and rotation in degrees.
 
 ## Compatibility and history
 
@@ -17,6 +17,8 @@ Each document has a numeric `formatVersion`. The application reads its current o
 Drawing format version 2 adds the three-point `arc` entity kind. Version-1 drawings remain readable and are upgraded when next saved.
 
 Drawing format version 3 expands rectangles from two opposite corners to four ordered corners. Version-1 and version-2 rectangles remain readable and are expanded when transformed or next saved.
+
+Drawing format version 4 adds text height and rotation. Text from earlier drawings remains readable and receives a safe default height when next saved.
 
 Before overwriting an existing document, DatumForge copies the previous revision into `.datumforge/history/project` or `.datumforge/history/drawing` and appends metadata to `index.json`. The project setting `historyLimit` limits retained snapshot files per document.
 

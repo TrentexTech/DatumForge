@@ -101,6 +101,24 @@ public sealed class EntityHitTesterTests
         Assert.Null(EntityHitTester.HitTest(drawing, new(5, 2), 0.5));
     }
 
+    [Fact]
+    public void HitTestUsesTextBoundsInsteadOfOnlyItsInsertionPoint()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        var text = new DrawingEntity
+        {
+            Kind = EntityKind.Text,
+            LayerId = layer.Id,
+            Points = [new(0, 0)],
+            Text = "TEST",
+            TextHeight = 10
+        };
+        drawing.Entities.Add(text);
+
+        Assert.Same(text, EntityHitTester.HitTest(drawing, new(12, 5), 0.5));
+        Assert.Null(EntityHitTester.HitTest(drawing, new(30, 5), 0.5));
+    }
+
     private static DrawingDocument DrawingWithLayer(out DrawingLayer layer)
     {
         layer = new DrawingLayer();
@@ -180,6 +198,29 @@ public sealed class EntityRectangleSelectorTests
         drawing.Entities.Add(Line(layer.Id, new(2, 2), new(8, 2)));
 
         Assert.Empty(EntityRectangleSelector.Select(drawing, new(0, 0), new(10, 10), crossing: true));
+    }
+
+    [Fact]
+    public void SelectionRectangleUsesCompleteRotatedTextBounds()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        var text = new DrawingEntity
+        {
+            Kind = EntityKind.Text,
+            LayerId = layer.Id,
+            Points = [new(10, 20)],
+            Text = "AB",
+            TextHeight = 10,
+            TextRotationDegrees = 90
+        };
+        drawing.Entities.Add(text);
+
+        Assert.Contains(text.Id, EntityRectangleSelector.Select(
+            drawing, new(-1, 19), new(11, 33), crossing: false));
+        Assert.DoesNotContain(text.Id, EntityRectangleSelector.Select(
+            drawing, new(1, 19), new(11, 33), crossing: false));
+        Assert.Contains(text.Id, EntityRectangleSelector.Select(
+            drawing, new(-1, 25), new(1, 27), crossing: true));
     }
 
     private static DrawingDocument DrawingWithLayer(out DrawingLayer layer)
@@ -308,6 +349,33 @@ public sealed class DrawingEditJournalTests
         AssertPoint(new(5, -5), line.Points[0]);
         AssertPoint(new(5, 5), line.Points[1]);
         Assert.Equal(line.Id, Assert.Single(drawing.Entities).Id);
+    }
+
+    [Fact]
+    public void TextRotationAndHeightRoundTripThroughTransformsAndUndo()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        var text = new DrawingEntity
+        {
+            Kind = EntityKind.Text,
+            LayerId = layer.Id,
+            Points = [new(0, 0)],
+            Text = "AB",
+            TextHeight = 10
+        };
+        drawing.Entities.Add(text);
+        var journal = new DrawingEditJournal();
+
+        Assert.Equal(1, journal.Rotate(drawing, [text.Id], new(7, 5), new(6, 6)));
+        Assert.Equal(90, text.TextRotationDegrees, 8);
+        Assert.Equal(1, journal.Scale(drawing, [text.Id], new(6, 6), new(6, 7)));
+        Assert.Equal(20, text.TextHeight, 8);
+        Assert.Equal("Scale entity", journal.Undo(drawing));
+        Assert.Equal(10, text.TextHeight, 8);
+        Assert.Equal(90, text.TextRotationDegrees, 8);
+        Assert.Equal("Rotate entity", journal.Undo(drawing));
+        Assert.Equal(0, text.TextRotationDegrees, 8);
+        Assert.Equal(new CadPoint(0, 0), Assert.Single(text.Points));
     }
 
     [Fact]

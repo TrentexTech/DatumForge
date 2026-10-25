@@ -19,6 +19,7 @@ public sealed class DrawingViewport : Control
     public event EventHandler? ViewChanged;
     public event EventHandler? InteractionCancelled;
     public event EventHandler? SelectToolRequested;
+    public event EventHandler? TextEntryRequested;
 
     public static readonly StyledProperty<DrawingDocument?> DrawingProperty =
         AvaloniaProperty.Register<DrawingViewport, DrawingDocument?>(nameof(Drawing));
@@ -64,6 +65,7 @@ public sealed class DrawingViewport : Control
     public LayoutDefinition? Layout { get => GetValue(LayoutProperty); set => SetValue(LayoutProperty, value); }
     public string ActiveTool { get => GetValue(ActiveToolProperty); set => SetValue(ActiveToolProperty, value); }
     public int RevisionToken { get => GetValue(RevisionTokenProperty); set => SetValue(RevisionTokenProperty, value); }
+    public bool IsAwaitingTextEntry => ActiveTool == "Text" && _anchor is not null;
     public string CursorPositionText
     {
         get => _cursorPositionText;
@@ -360,6 +362,7 @@ public sealed class DrawingViewport : Control
     public CoordinateSubmissionResult SubmitCoordinate(string? input)
     {
         if (Drawing is null) return CoordinateSubmissionResult.Failure("Open a drawing before entering coordinates.");
+        if (IsAwaitingTextEntry) return FinishText(input);
         if (ActiveTool == "Select") return CoordinateSubmissionResult.Failure("Choose a drawing or modify tool before entering coordinates.");
         if (ActiveTool == "Polyline" && string.IsNullOrWhiteSpace(input)) return FinishPolyline();
         if (!CoordinateParser.TryResolve(input, _anchor, out var point, out var error))
@@ -465,10 +468,7 @@ public sealed class DrawingViewport : Control
             return CoordinateSubmissionResult.CompletedInput("Transform applied.");
         }
 
-        if (ActiveTool == "Text")
-            return AddEntity(EntityKind.Text, [point], 0, "Note")
-                ? CoordinateSubmissionResult.CompletedInput("Text created.")
-                : CoordinateSubmissionResult.Failure("No visible, unlocked layer is available.");
+        if (ActiveTool == "Text") return BeginText(point);
 
         if (ActiveTool == "Arc") return ProcessArcPoint(point);
         if (ActiveTool == "Polyline") return ProcessPolylinePoint(point);
@@ -513,6 +513,35 @@ public sealed class DrawingViewport : Control
         InvalidateVisual();
         return CoordinateSubmissionResult.Accepted(
             $"Polyline vertex {_polyline.Vertices.Count} set to {FormatPoint(point)}; add another point or press Enter to finish.");
+    }
+
+    private CoordinateSubmissionResult BeginText(CadPoint point)
+    {
+        _anchor = point;
+        _previewPoint = point;
+        _snapResult = null;
+        InvalidateVisual();
+        TextEntryRequested?.Invoke(this, EventArgs.Empty);
+        return CoordinateSubmissionResult.Accepted(
+            $"Text insertion point set to {FormatPoint(point)}; enter the text content.");
+    }
+
+    private CoordinateSubmissionResult FinishText(string? input)
+    {
+        var content = input?.Trim();
+        if (string.IsNullOrWhiteSpace(content))
+            return CoordinateSubmissionResult.Failure("Enter text content, or press Escape to cancel.");
+        if (_anchor is not { } insertion)
+            return CoordinateSubmissionResult.Failure("Choose a text insertion point first.");
+
+        if (!AddEntity(EntityKind.Text, [insertion], 0, content, TextGeometry.DefaultHeight))
+            return CoordinateSubmissionResult.Failure("No visible, unlocked layer is available.");
+
+        _anchor = null;
+        _previewPoint = null;
+        _snapResult = null;
+        InvalidateVisual();
+        return CoordinateSubmissionResult.CompletedInput("Text created.");
     }
 
     private CoordinateSubmissionResult FinishPolyline()
@@ -689,11 +718,24 @@ public sealed class DrawingViewport : Control
         context.DrawRectangle(fill, pen, bounds);
     }
 
-    private bool AddEntity(EntityKind kind, List<CadPoint> points, double radius, string? text)
+    private bool AddEntity(
+        EntityKind kind,
+        List<CadPoint> points,
+        double radius,
+        string? text,
+        double textHeight = 0)
     {
         var layer = Drawing!.Layers.FirstOrDefault(item => item.IsVisible && !item.IsLocked);
         if (layer is null) return false;
-        Drawing.Entities.Add(new DrawingEntity { Kind = kind, LayerId = layer.Id, Points = points, Radius = radius, Text = text });
+        Drawing.Entities.Add(new DrawingEntity
+        {
+            Kind = kind,
+            LayerId = layer.Id,
+            Points = points,
+            Radius = radius,
+            Text = text,
+            TextHeight = textHeight
+        });
         EntityCreated?.Invoke(this, new EntityCreatedEventArgs(Drawing.Entities[^1]));
         InvalidateVisual();
         return true;
@@ -884,6 +926,9 @@ public sealed class DrawingViewport : Control
                 for (var index = 1; index < entity.Points.Count; index++)
                     context.DrawLine(pen, ToScreen(entity.Points[index - 1]), ToScreen(entity.Points[index]));
                 break;
+            case EntityKind.Text:
+                DrawTextEntity(context, pen.Brush ?? brush, entity);
+                break;
             case EntityKind.Dimension when entity.Points.Count > 1:
                 DrawDimension(context, pen, entity.Points[0], entity.Points[1], entity.Text);
                 break;
@@ -924,6 +969,27 @@ public sealed class DrawingViewport : Control
             if (previous is { } start) context.DrawLine(pen, start, current);
             previous = current;
         }
+    }
+
+    private void DrawTextEntity(DrawingContext context, IBrush brush, DrawingEntity entity)
+    {
+        if (entity.Points.Count == 0) return;
+        var content = string.IsNullOrWhiteSpace(entity.Text) ? "Text" : entity.Text;
+        var fontSize = TextGeometry.Height(entity) * Math.Max(0.001, Layout?.Zoom ?? 1);
+        if (fontSize < 0.5) return;
+
+        var text = new FormattedText(
+            content,
+            CultureInfo.InvariantCulture,
+            FlowDirection.LeftToRight,
+            new Typeface("Inter", FontStyle.Normal, FontWeight.Normal, FontStretch.Normal),
+            Math.Min(fontSize, 2048),
+            brush);
+        var insertion = ToScreen(entity.Points[0]);
+        var origin = new Point(insertion.X, insertion.Y - text.Height);
+        var radians = -TextGeometry.NormalizeDegrees(entity.TextRotationDegrees) * Math.PI / 180;
+        using (context.PushTransform(Matrix.CreateRotation(radians, insertion)))
+            context.DrawText(text, origin);
     }
 
     private void DrawDimension(

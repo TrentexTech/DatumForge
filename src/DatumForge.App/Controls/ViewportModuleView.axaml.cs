@@ -16,9 +16,13 @@ public partial class ViewportModuleView : UserControl
 
     public ViewportModuleItemViewModel? ViewModel => DataContext as ViewportModuleItemViewModel;
 
+    public event EventHandler? TextEntryRequested;
+
     public CoordinateSubmissionResult SubmitCoordinate(string? input) => DrawingSurface.SubmitCoordinate(input);
 
     public bool HandleEscape() => DrawingSurface.HandleEscape();
+
+    public bool IsAwaitingTextEntry => DrawingSurface.IsAwaitingTextEntry;
 
     private void Viewport_OnEntityCreated(object? sender, EntityCreatedEventArgs e) => ViewModel?.Owner.RecordEntityCreated(e.Entity);
 
@@ -35,6 +39,16 @@ public partial class ViewportModuleView : UserControl
 
     private void Viewport_OnSelectToolRequested(object? sender, EventArgs e) =>
         ViewModel?.Owner.SelectToolCommand.Execute("Select");
+
+    private void Viewport_OnTextEntryRequested(object? sender, EventArgs e)
+    {
+        if (ViewModel?.Owner is { } owner)
+        {
+            owner.CoordinateInputText = string.Empty;
+            owner.StatusText = "Text insertion point set; enter text content, then press Enter";
+        }
+        TextEntryRequested?.Invoke(this, EventArgs.Empty);
+    }
 
     private void Viewport_OnViewChanged(object? sender, EventArgs e)
     {

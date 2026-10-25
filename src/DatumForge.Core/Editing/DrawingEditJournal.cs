@@ -70,14 +70,20 @@ public sealed class DrawingEditJournal
         if (!double.IsFinite(angle) || Math.Abs(angle) < 1e-9) return 0;
         var cosine = Math.Cos(angle);
         var sine = Math.Sin(angle);
-        return Transform(drawing, ids, "Rotate", entity => entity.Points = entity.Points.Select(point =>
+        return Transform(drawing, ids, "Rotate", entity =>
         {
-            var x = point.X - center.Value.X;
-            var y = point.Y - center.Value.Y;
-            return new CadPoint(
-                center.Value.X + x * cosine - y * sine,
-                center.Value.Y + x * sine + y * cosine);
-        }).ToList());
+            entity.Points = entity.Points.Select(point =>
+            {
+                var x = point.X - center.Value.X;
+                var y = point.Y - center.Value.Y;
+                return new CadPoint(
+                    center.Value.X + x * cosine - y * sine,
+                    center.Value.Y + x * sine + y * cosine);
+            }).ToList();
+            if (entity.Kind == EntityKind.Text)
+                entity.TextRotationDegrees = TextGeometry.NormalizeDegrees(
+                    entity.TextRotationDegrees + angle * 180 / Math.PI);
+        });
     }
 
     public int Scale(DrawingDocument drawing, IEnumerable<Guid> entityIds, CadPoint reference, CadPoint target)
@@ -93,6 +99,8 @@ public sealed class DrawingEditJournal
                 center.Value.X + (point.X - center.Value.X) * factor,
                 center.Value.Y + (point.Y - center.Value.Y) * factor)).ToList();
             entity.Radius *= factor;
+            if (entity.Kind == EntityKind.Text)
+                entity.TextHeight = TextGeometry.Height(entity) * factor;
         });
     }
 
@@ -103,9 +111,14 @@ public sealed class DrawingEditJournal
         if (axisX * axisX + axisY * axisY < 1e-18) return 0;
 
         return Transform(drawing, entityIds, "Mirror", entity =>
+        {
+            if (entity.Kind == EntityKind.Text)
+                entity.TextRotationDegrees = TextGeometry.MirroredRotation(
+                    entity.TextRotationDegrees, axisStart, axisEnd);
             entity.Points = entity.Points
                 .Select(point => EntityGeometry.ReflectAcrossLine(point, axisStart, axisEnd))
-                .ToList());
+                .ToList();
+        });
     }
 
     public string? Undo(DrawingDocument drawing)
@@ -174,7 +187,9 @@ public sealed class DrawingEditJournal
         LayerId = source.LayerId,
         Points = [.. source.Points],
         Radius = source.Radius,
-        Text = source.Text
+        Text = source.Text,
+        TextHeight = source.TextHeight,
+        TextRotationDegrees = source.TextRotationDegrees
     };
 
     private sealed class JournalState
@@ -232,6 +247,8 @@ public sealed class DrawingEditJournal
                 entity.Points = [.. snapshot.Points];
                 entity.Radius = snapshot.Radius;
                 entity.Text = snapshot.Text;
+                entity.TextHeight = snapshot.TextHeight;
+                entity.TextRotationDegrees = snapshot.TextRotationDegrees;
             }
         }
     }

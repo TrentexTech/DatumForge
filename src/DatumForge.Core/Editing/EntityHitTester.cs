@@ -31,7 +31,7 @@ public static class EntityHitTester
                 ArcGeometry.DistanceTo(arc, point) <= tolerance,
             EntityKind.Rectangle when entity.Points.Count > 1 => RectangleDistance(entity.Points, point) <= tolerance,
             EntityKind.Polyline => PolylineDistance(entity.Points, point) <= tolerance,
-            EntityKind.Text => Distance(entity.Points[0], point) <= tolerance * 1.5,
+            EntityKind.Text => TextGeometry.Contains(entity, point, tolerance),
             _ when entity.Points.Count > 1 => SegmentDistance(entity.Points[0], entity.Points[1], point) <= tolerance,
             _ => Distance(entity.Points[0], point) <= tolerance
         };

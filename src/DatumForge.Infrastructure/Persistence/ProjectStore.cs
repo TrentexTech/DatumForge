@@ -117,7 +117,11 @@ public sealed class ProjectStore
 
     private static void NormalizeDrawingGeometry(DrawingDocument drawing)
     {
-        foreach (var entity in drawing.Entities) RectangleGeometry.Normalize(entity);
+        foreach (var entity in drawing.Entities)
+        {
+            RectangleGeometry.Normalize(entity);
+            TextGeometry.Normalize(entity);
+        }
     }
 
     private static async Task SnapshotAsync(string root, string scope, Guid id, int revision, string sourcePath, CancellationToken cancellationToken)

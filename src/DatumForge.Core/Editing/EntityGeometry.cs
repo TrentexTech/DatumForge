@@ -66,6 +66,12 @@ public static class EntityGeometry
             yield break;
         }
 
+        if (entity.Kind == EntityKind.Text)
+        {
+            foreach (var point in TextGeometry.Corners(entity)) yield return point;
+            yield break;
+        }
+
         foreach (var point in entity.Points) yield return point;
     }
 

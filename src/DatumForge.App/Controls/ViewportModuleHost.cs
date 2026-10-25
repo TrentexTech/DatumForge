@@ -8,6 +8,8 @@ namespace DatumForge.App.Controls;
 
 public sealed class ViewportModuleHost : Grid
 {
+    public event EventHandler? TextEntryRequested;
+
     public static readonly StyledProperty<IEnumerable<ViewportModuleItemViewModel>?> ItemsSourceProperty =
         AvaloniaProperty.Register<ViewportModuleHost, IEnumerable<ViewportModuleItemViewModel>?>(nameof(ItemsSource));
 
@@ -36,6 +38,9 @@ public sealed class ViewportModuleHost : Grid
         return viewer?.SubmitCoordinate(input)
                ?? new CoordinateSubmissionResult(false, false, "Add the Viewer module before entering coordinates.");
     }
+
+    public bool IsAwaitingTextEntry =>
+        _moduleViews.FirstOrDefault(view => view.ViewModel?.IsViewer == true)?.IsAwaitingTextEntry == true;
 
     public bool HandleEscape()
     {
@@ -79,6 +84,7 @@ public sealed class ViewportModuleHost : Grid
             _moduleColumns.Add(column);
 
             var view = new ViewportModuleView { DataContext = item };
+            view.TextEntryRequested += (_, _) => TextEntryRequested?.Invoke(this, EventArgs.Empty);
             SetColumn(view, index * 2);
             Children.Add(view);
             _moduleViews.Add(view);
