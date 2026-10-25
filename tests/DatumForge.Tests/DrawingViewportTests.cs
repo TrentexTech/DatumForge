@@ -43,6 +43,21 @@ public sealed class ViewportSelectionBehaviorTests
     }
 }
 
+public sealed class ViewportCoordinateDisplayTests
+{
+    [Fact]
+    public void CoordinateReadoutUsesCompactInvariantFormatting()
+    {
+        Assert.Equal("X: 12.346   Y: -7.5", ViewportCoordinateDisplay.Format(new CadPoint(12.3456, -7.5)));
+    }
+
+    [Fact]
+    public void CoordinateReadoutShowsPlaceholdersOutsideViewer()
+    {
+        Assert.Equal("X: —   Y: —", ViewportCoordinateDisplay.Format(null));
+    }
+}
+
 public sealed class PolylineConstructionTests
 {
     [Fact]

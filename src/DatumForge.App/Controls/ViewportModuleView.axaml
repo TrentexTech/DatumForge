@@ -52,19 +52,35 @@
         </Border>
 
         <Border Grid.Row="1" Background="#101419" IsVisible="{Binding IsViewer}" ClipToBounds="True">
-            <controls:DrawingViewport x:Name="DrawingSurface"
-                                      ClipToBounds="True"
-                                      Drawing="{Binding Owner.ActiveDrawing}"
-                                      Layout="{Binding Owner.SelectedLayout}"
-                                      ActiveTool="{Binding Owner.ActiveTool}"
-                                      RevisionToken="{Binding Owner.ViewportRevision}"
-                                      EntityCreated="Viewport_OnEntityCreated"
-                                      SelectionChanged="Viewport_OnSelectionChanged"
-                                      TransformRequested="Viewport_OnTransformRequested"
-                                      ViewChanged="Viewport_OnViewChanged"
-                                      InteractionCancelled="Viewport_OnInteractionCancelled"
-                                      SelectToolRequested="Viewport_OnSelectToolRequested"
-                                      Focusable="True" />
+            <Grid>
+                <controls:DrawingViewport x:Name="DrawingSurface"
+                                          ClipToBounds="True"
+                                          Drawing="{Binding Owner.ActiveDrawing}"
+                                          Layout="{Binding Owner.SelectedLayout}"
+                                          ActiveTool="{Binding Owner.ActiveTool}"
+                                          RevisionToken="{Binding Owner.ViewportRevision}"
+                                          EntityCreated="Viewport_OnEntityCreated"
+                                          SelectionChanged="Viewport_OnSelectionChanged"
+                                          TransformRequested="Viewport_OnTransformRequested"
+                                          ViewChanged="Viewport_OnViewChanged"
+                                          InteractionCancelled="Viewport_OnInteractionCancelled"
+                                          SelectToolRequested="Viewport_OnSelectToolRequested"
+                                          Focusable="True" />
+                <Border HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,10,9"
+                        Padding="8,4"
+                        Background="#D9151D23"
+                        BorderBrush="#34414A"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        IsHitTestVisible="False">
+                    <TextBlock Text="{Binding CursorPositionText, ElementName=DrawingSurface}"
+                               Foreground="#A8B7C0"
+                               FontFamily="Consolas"
+                               FontSize="10" />
+                </Border>
+            </Grid>
         </Border>
 
         <Border Grid.Row="1" Classes="panel" BorderThickness="0" Padding="16" IsVisible="{Binding IsProperties}">

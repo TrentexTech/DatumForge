@@ -27,6 +27,10 @@ public sealed class DrawingViewport : Control
         AvaloniaProperty.Register<DrawingViewport, string>(nameof(ActiveTool), "Select");
     public static readonly StyledProperty<int> RevisionTokenProperty =
         AvaloniaProperty.Register<DrawingViewport, int>(nameof(RevisionToken));
+    public static readonly DirectProperty<DrawingViewport, string> CursorPositionTextProperty =
+        AvaloniaProperty.RegisterDirect<DrawingViewport, string>(
+            nameof(CursorPositionText),
+            control => control.CursorPositionText);
 
     private CadPoint? _anchor;
     private CadPoint? _arcStart;
@@ -44,6 +48,7 @@ public sealed class DrawingViewport : Control
     private Point? _selectionDragCurrent;
     private KeyModifiers _selectionDragModifiers;
     private IPointer? _selectionPointer;
+    private string _cursorPositionText = ViewportCoordinateDisplay.Format(null);
 
     static DrawingViewport()
     {
@@ -58,6 +63,11 @@ public sealed class DrawingViewport : Control
     public LayoutDefinition? Layout { get => GetValue(LayoutProperty); set => SetValue(LayoutProperty, value); }
     public string ActiveTool { get => GetValue(ActiveToolProperty); set => SetValue(ActiveToolProperty, value); }
     public int RevisionToken { get => GetValue(RevisionTokenProperty); set => SetValue(RevisionTokenProperty, value); }
+    public string CursorPositionText
+    {
+        get => _cursorPositionText;
+        private set => SetAndRaise(CursorPositionTextProperty, ref _cursorPositionText, value);
+    }
 
     public override void Render(DrawingContext context)
     {
@@ -110,6 +120,7 @@ public sealed class DrawingViewport : Control
         base.OnPointerPressed(e);
         Focus();
         _lastPointerPosition = e.GetPosition(this);
+        UpdateCursorPositionText();
         if (Layout is not null && e.GetCurrentPoint(this).Properties.IsMiddleButtonPressed)
         {
             _previewPoint = null;
@@ -165,6 +176,7 @@ public sealed class DrawingViewport : Control
     {
         base.OnPointerMoved(e);
         _lastPointerPosition = e.GetPosition(this);
+        UpdateCursorPositionText();
         if (_lastPanPosition is { } previous && Layout is not null)
         {
             var current = _lastPointerPosition.Value;
@@ -173,6 +185,7 @@ public sealed class DrawingViewport : Control
             if (delta.X != 0 || delta.Y != 0)
             {
                 Layout.Pan = ViewportNavigation.PanByPixels(Layout.Pan, delta.X, delta.Y, Layout.Zoom);
+                UpdateCursorPositionText();
                 _snapResult = null;
                 InvalidateVisual();
                 _panChangeReported = true;
@@ -214,6 +227,7 @@ public sealed class DrawingViewport : Control
     {
         base.OnPointerExited(e);
         _lastPointerPosition = null;
+        UpdateCursorPositionText();
         ClearPointerFeedback();
     }
 
@@ -265,6 +279,7 @@ public sealed class DrawingViewport : Control
         if (Layout is null || e.Delta.Y == 0) return;
         var pointer = e.GetPosition(this);
         _lastPointerPosition = pointer;
+        UpdateCursorPositionText();
         var view = ViewportNavigation.ZoomAt(
             Layout.Pan,
             Layout.Zoom,
@@ -276,6 +291,7 @@ public sealed class DrawingViewport : Control
         if (view.Zoom == Layout.Zoom && view.Pan == Layout.Pan) return;
         Layout.Zoom = view.Zoom;
         Layout.Pan = view.Pan;
+        UpdateCursorPositionText();
         _previewPoint = Drawing is not null && ActiveTool != "Select"
             ? ResolvePointerPoint(ToWorld(pointer))
             : null;
@@ -385,6 +401,7 @@ public sealed class DrawingViewport : Control
 
     private void RefreshPointerFeedback()
     {
+        UpdateCursorPositionText();
         if (_lastPointerPosition is { } pointer && Drawing is not null)
         {
             if (ActiveTool == "Select")
@@ -402,6 +419,12 @@ public sealed class DrawingViewport : Control
         }
 
         ClearPointerFeedback();
+    }
+
+    private void UpdateCursorPositionText()
+    {
+        CursorPositionText = ViewportCoordinateDisplay.Format(
+            _lastPointerPosition is { } pointer ? ToWorld(pointer) : null);
     }
 
     private void UpdateSelectionPreview(CadPoint point)
