@@ -155,6 +155,27 @@ public sealed class ObjectSnapperTests
     }
 
     [Fact]
+    public void ArcNearestSnapUsesDeterministicEndpointTieBreak()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        drawing.Entities.Add(new DrawingEntity
+        {
+            Kind = EntityKind.Arc,
+            LayerId = layer.Id,
+            Points = [new(-5, 0), new(0, 5), new(5, 0)]
+        });
+
+        var result = ObjectSnapper.FindNearest(
+            drawing,
+            new CadPoint(0, -5),
+            8,
+            ObjectSnapMode.Nearest);
+
+        Assert.Equal(ObjectSnapKind.Nearest, result?.Kind);
+        AssertPoint(new CadPoint(-5, 0), result?.Point);
+    }
+
+    [Fact]
     public void FindsNearestPointOnSegmentsAndCircles()
     {
         var drawing = DrawingWithLayer(out var layer);

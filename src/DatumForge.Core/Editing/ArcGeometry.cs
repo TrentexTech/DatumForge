@@ -31,21 +31,19 @@ public static class ArcGeometry
     public static bool TryCreate(CadPoint start, CadPoint through, CadPoint end, out CadArc arc)
     {
         arc = default;
-        var determinant = 2 * (start.X * (through.Y - end.Y) +
-                               through.X * (end.Y - start.Y) +
-                               end.X * (start.Y - through.Y));
-        if (Math.Abs(determinant) < 1e-9) return false;
+        var throughX = through.X - start.X;
+        var throughY = through.Y - start.Y;
+        var endX = end.X - start.X;
+        var endY = end.Y - start.Y;
+        var throughSquared = throughX * throughX + throughY * throughY;
+        var endSquared = endX * endX + endY * endY;
+        var determinant = 2 * (throughX * endY - throughY * endX);
+        var determinantTolerance = Math.Max(1, Math.Max(throughSquared, endSquared)) * 1e-12;
+        if (Math.Abs(determinant) <= determinantTolerance) return false;
 
-        var startSquared = start.X * start.X + start.Y * start.Y;
-        var throughSquared = through.X * through.X + through.Y * through.Y;
-        var endSquared = end.X * end.X + end.Y * end.Y;
         var center = new CadPoint(
-            (startSquared * (through.Y - end.Y) +
-             throughSquared * (end.Y - start.Y) +
-             endSquared * (start.Y - through.Y)) / determinant,
-            (startSquared * (end.X - through.X) +
-             throughSquared * (start.X - end.X) +
-             endSquared * (through.X - start.X)) / determinant);
+            start.X + (throughSquared * endY - endSquared * throughY) / determinant,
+            start.Y + (endSquared * throughX - throughSquared * endX) / determinant);
         var radius = Distance(center, start);
         if (!double.IsFinite(radius) || radius < 1e-9) return false;
 
@@ -65,6 +63,9 @@ public static class ArcGeometry
 
     public static CadPoint NearestPoint(CadArc arc, CadPoint point)
     {
+        if (DistanceSquared(arc.Center, point) <= Math.Max(1, arc.Radius * arc.Radius) * 1e-24)
+            return arc.Start;
+
         var angle = Angle(arc.Center, point);
         if (arc.ContainsAngle(angle))
             return new CadPoint(
