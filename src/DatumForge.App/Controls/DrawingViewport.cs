@@ -36,9 +36,14 @@ public sealed class DrawingViewport : Control
     private ObjectSnapResult? _snapResult;
     private Guid? _hoveredEntityId;
     private readonly HashSet<Guid> _selectedEntityIds = [];
+    private readonly HashSet<Guid> _selectionPreviewEntityIds = [];
     private Point? _lastPointerPosition;
     private Point? _lastPanPosition;
     private bool _panChangeReported;
+    private Point? _selectionDragStart;
+    private Point? _selectionDragCurrent;
+    private KeyModifiers _selectionDragModifiers;
+    private IPointer? _selectionPointer;
 
     static DrawingViewport()
     {
@@ -71,8 +76,11 @@ public sealed class DrawingViewport : Control
                 entity,
                 layer,
                 _selectedEntityIds.Contains(entity.Id),
-                _hoveredEntityId == entity.Id);
+                _hoveredEntityId == entity.Id,
+                _selectionPreviewEntityIds.Contains(entity.Id));
         }
+
+        DrawSelectionWindow(context);
 
         if (ActiveTool == "Polyline" && _polyline.IsActive)
             DrawPolylinePreview(context);
@@ -122,7 +130,15 @@ public sealed class DrawingViewport : Control
         if (ActiveTool == "Select")
         {
             if (!properties.IsLeftButtonPressed) return;
-            SelectAt(point, e.KeyModifiers);
+            _selectionDragStart = e.GetPosition(this);
+            _selectionDragCurrent = _selectionDragStart;
+            _selectionDragModifiers = e.KeyModifiers;
+            _selectionPointer = e.Pointer;
+            _hoveredEntityId = null;
+            _selectionPreviewEntityIds.Clear();
+            e.Pointer.Capture(this);
+            InvalidateVisual();
+            e.Handled = true;
             return;
         }
 
@@ -166,6 +182,16 @@ public sealed class DrawingViewport : Control
             return;
         }
 
+        if (_selectionDragStart is not null)
+        {
+            _selectionDragCurrent = _lastPointerPosition;
+            _hoveredEntityId = null;
+            UpdateSelectionWindowPreview();
+            InvalidateVisual();
+            e.Handled = true;
+            return;
+        }
+
         if (Drawing is null)
         {
             ClearPointerFeedback();
@@ -194,6 +220,16 @@ public sealed class DrawingViewport : Control
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+        if (_selectionDragStart is { } selectionStart && e.InitialPressMouseButton == MouseButton.Left)
+        {
+            var selectionEnd = e.GetPosition(this);
+            CompleteSelectionDrag(selectionStart, selectionEnd, _selectionDragModifiers);
+            EndSelectionDrag();
+            e.Pointer.Capture(null);
+            RefreshPointerFeedback();
+            e.Handled = true;
+            return;
+        }
         if (_lastPanPosition is null || e.InitialPressMouseButton != MouseButton.Middle) return;
         var changed = EndPanning();
         e.Pointer.Capture(null);
@@ -204,6 +240,11 @@ public sealed class DrawingViewport : Control
     protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
     {
         base.OnPointerCaptureLost(e);
+        if (_selectionDragStart is not null)
+        {
+            EndSelectionDrag();
+            RefreshPointerFeedback();
+        }
         if (_lastPanPosition is null) return;
         if (EndPanning()) ViewChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -239,7 +280,8 @@ public sealed class DrawingViewport : Control
             ? ResolvePointerPoint(ToWorld(pointer))
             : null;
         if (_previewPoint is null) _snapResult = null;
-        if (ActiveTool == "Select" && Drawing is not null) UpdateSelectionPreview(ToWorld(pointer));
+        if (_selectionDragStart is not null) UpdateSelectionWindowPreview();
+        else if (ActiveTool == "Select" && Drawing is not null) UpdateSelectionPreview(ToWorld(pointer));
         InvalidateVisual();
         ViewChanged?.Invoke(this, EventArgs.Empty);
         e.Handled = true;
@@ -259,6 +301,15 @@ public sealed class DrawingViewport : Control
 
     public bool HandleEscape()
     {
+        if (_selectionDragStart is not null)
+        {
+            var pointer = _selectionPointer;
+            EndSelectionDrag();
+            pointer?.Capture(null);
+            RefreshPointerFeedback();
+            return true;
+        }
+
         switch (ViewportEscapeBehavior.Decide(Drawing is not null, _anchor is not null, ActiveTool))
         {
             case ViewportEscapeAction.CancelInteraction:
@@ -542,6 +593,75 @@ public sealed class DrawingViewport : Control
         InvalidateVisual();
     }
 
+    private void CompleteSelectionDrag(Point start, Point end, KeyModifiers modifiers)
+    {
+        var delta = end - start;
+        if (!ViewportSelectionBehavior.IsDrag(delta.X, delta.Y))
+        {
+            SelectAt(ToWorld(end), modifiers);
+            return;
+        }
+
+        var matches = EntityRectangleSelector.Select(
+            Drawing!,
+            ToWorld(start),
+            ToWorld(end),
+            ViewportSelectionBehavior.IsCrossing(start.X, end.X));
+        var additive = modifiers.HasFlag(KeyModifiers.Control) || modifiers.HasFlag(KeyModifiers.Shift);
+        if (!additive) _selectedEntityIds.Clear();
+        foreach (var entityId in matches)
+        {
+            if (additive && _selectedEntityIds.Contains(entityId)) _selectedEntityIds.Remove(entityId);
+            else _selectedEntityIds.Add(entityId);
+        }
+
+        SelectionChanged?.Invoke(this, new EntitySelectionChangedEventArgs([.. _selectedEntityIds]));
+        InvalidateVisual();
+    }
+
+    private void EndSelectionDrag()
+    {
+        _selectionDragStart = null;
+        _selectionDragCurrent = null;
+        _selectionDragModifiers = KeyModifiers.None;
+        _selectionPointer = null;
+        _selectionPreviewEntityIds.Clear();
+        InvalidateVisual();
+    }
+
+    private void UpdateSelectionWindowPreview()
+    {
+        _selectionPreviewEntityIds.Clear();
+        if (Drawing is null || _selectionDragStart is not { } start || _selectionDragCurrent is not { } current) return;
+        var delta = current - start;
+        if (!ViewportSelectionBehavior.IsDrag(delta.X, delta.Y)) return;
+
+        _selectionPreviewEntityIds.UnionWith(EntityRectangleSelector.Select(
+            Drawing,
+            ToWorld(start),
+            ToWorld(current),
+            ViewportSelectionBehavior.IsCrossing(start.X, current.X)));
+    }
+
+    private void DrawSelectionWindow(DrawingContext context)
+    {
+        if (_selectionDragStart is not { } start || _selectionDragCurrent is not { } current) return;
+        var delta = current - start;
+        if (!ViewportSelectionBehavior.IsDrag(delta.X, delta.Y)) return;
+
+        var crossing = ViewportSelectionBehavior.IsCrossing(start.X, current.X);
+        var color = Color.Parse(crossing ? "#53C878" : "#4C8DFF");
+        var fill = new SolidColorBrush(color) { Opacity = 0.14 };
+        var border = new SolidColorBrush(color) { Opacity = 0.9 };
+        var pen = new Pen(border, 1, dashStyle: crossing ? new DashStyle([5, 3], 0) : null);
+        var bounds = new Rect(
+            Math.Min(start.X, current.X),
+            Math.Min(start.Y, current.Y),
+            Math.Abs(current.X - start.X),
+            Math.Abs(current.Y - start.Y));
+        context.DrawRectangle(fill, pen, bounds);
+    }
+
     private bool AddEntity(EntityKind kind, List<CadPoint> points, double radius, string? text)
     {
         var layer = Drawing!.Layers.FirstOrDefault(item => item.IsVisible && !item.IsLocked);
@@ -689,7 +809,8 @@ public sealed class DrawingViewport : Control
         DrawingEntity entity,
         DrawingLayer layer,
         bool isSelected,
-        bool isHovered)
+        bool isHovered,
+        bool isSelectionPreview)
     {
         var brush = ParseBrush(layer.Color, "#E8EDF2");
         brush.Opacity = Math.Clamp(layer.Opacity, 0, 1);
@@ -702,8 +823,14 @@ public sealed class DrawingViewport : Control
             CadLineType.Center => new DashStyle([12, 4, 2, 4], 0),
             _ => null
         };
-        var pen = isSelected
-            ? new Pen(new SolidColorBrush(Color.Parse("#65D6FF")), thickness + 2)
+        var pen = isSelectionPreview
+            ? new Pen(new SolidColorBrush(Color.Parse(
+                _selectionDragStart is { } start && _selectionDragCurrent is { } current &&
+                ViewportSelectionBehavior.IsCrossing(start.X, current.X)
+                    ? "#53C878"
+                    : "#4C8DFF")), thickness + 3)
+            : isSelected
+                ? new Pen(new SolidColorBrush(Color.Parse("#65D6FF")), thickness + 2)
             : isHovered
                 ? new Pen(new SolidColorBrush(Color.Parse("#67D6AD")), thickness + 2)
                 : new Pen(brush, thickness, dashStyle: dash);

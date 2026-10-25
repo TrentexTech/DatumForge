@@ -22,6 +22,27 @@ public sealed class ViewportEscapeBehaviorTests
     }
 }
 
+public sealed class ViewportSelectionBehaviorTests
+{
+    [Theory]
+    [InlineData(100, 160, false)]
+    [InlineData(160, 100, true)]
+    [InlineData(100, 100, false)]
+    public void HorizontalDirectionDeterminesCrossingMode(double startX, double currentX, bool expected)
+    {
+        Assert.Equal(expected, ViewportSelectionBehavior.IsCrossing(startX, currentX));
+    }
+
+    [Theory]
+    [InlineData(3, 2, false)]
+    [InlineData(4, 0, true)]
+    [InlineData(-3, -3, true)]
+    public void MinimumMovementDistinguishesClickFromDrag(double deltaX, double deltaY, bool expected)
+    {
+        Assert.Equal(expected, ViewportSelectionBehavior.IsDrag(deltaX, deltaY));
+    }
+}
+
 public sealed class PolylineConstructionTests
 {
     [Fact]

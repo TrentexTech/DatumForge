@@ -12,6 +12,9 @@ DatumForge keeps viewport interaction separate from drawing mutations. The viewp
 ## Selection
 
 - Click an entity with **Select** to replace the current selection.
+- Drag from left to right to select only entities fully enclosed by the blue selection window.
+- Drag from right to left to select every entity touched by the green crossing window.
+- While dragging, matching entities use the window's blue or green highlight to preview the pending selection.
 - Hovering in **Select** previews the topmost entity that the next click would select with a green highlight.
 - Hold **Ctrl** or **Shift** while clicking to toggle entities in the selection set.
 - Selected entities use a cyan highlight with white endpoint grips.

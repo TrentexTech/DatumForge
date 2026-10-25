@@ -95,6 +95,87 @@ public sealed class EntityHitTesterTests
         new() { Kind = EntityKind.Line, LayerId = layerId, Points = [start, end] };
 }
 
+public sealed class EntityRectangleSelectorTests
+{
+    [Fact]
+    public void WindowSelectionRequiresCompleteContainmentWhileCrossingSelectionOnlyRequiresContact()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        var enclosed = Line(layer.Id, new(2, 2), new(8, 2));
+        var crossing = Line(layer.Id, new(-5, 5), new(5, 5));
+        var outside = Line(layer.Id, new(12, 2), new(15, 2));
+        drawing.Entities.AddRange([enclosed, crossing, outside]);
+
+        var window = EntityRectangleSelector.Select(drawing, new(0, 0), new(10, 10), crossing: false);
+        var crossingWindow = EntityRectangleSelector.Select(drawing, new(0, 0), new(10, 10), crossing: true);
+
+        Assert.Equal([enclosed.Id], window);
+        Assert.Equal([enclosed.Id, crossing.Id], crossingWindow);
+    }
+
+    [Fact]
+    public void SelectionRectangleHandlesCirclesArcsAndRotatedRectangles()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        var circle = new DrawingEntity
+        {
+            Kind = EntityKind.Circle,
+            LayerId = layer.Id,
+            Points = [new(5, 5)],
+            Radius = 2
+        };
+        var surroundingCircle = new DrawingEntity
+        {
+            Kind = EntityKind.Circle,
+            LayerId = layer.Id,
+            Points = [new(5, 5)],
+            Radius = 20
+        };
+        var arc = new DrawingEntity
+        {
+            Kind = EntityKind.Arc,
+            LayerId = layer.Id,
+            Points = [new(-5, 0), new(0, 5), new(5, 0)]
+        };
+        var rectangle = new DrawingEntity
+        {
+            Kind = EntityKind.Rectangle,
+            LayerId = layer.Id,
+            Points = [new(0, 0), new(2, 2), new(0, 4), new(-2, 2)]
+        };
+        drawing.Entities.AddRange([circle, surroundingCircle, arc, rectangle]);
+
+        var circleWindow = EntityRectangleSelector.Select(drawing, new(2, 2), new(8, 8), crossing: false);
+        var insideLargeCircle = EntityRectangleSelector.Select(drawing, new(4, 4), new(6, 6), crossing: true);
+        var arcCrossing = EntityRectangleSelector.Select(drawing, new(-1, 4), new(1, 6), crossing: true);
+        var rectangleCrossing = EntityRectangleSelector.Select(drawing, new(1, 0.5), new(3, 2), crossing: true);
+
+        Assert.Contains(circle.Id, circleWindow);
+        Assert.DoesNotContain(surroundingCircle.Id, insideLargeCircle);
+        Assert.Contains(arc.Id, arcCrossing);
+        Assert.Contains(rectangle.Id, rectangleCrossing);
+    }
+
+    [Fact]
+    public void SelectionRectangleIgnoresHiddenLayerGeometry()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        layer.IsVisible = false;
+        drawing.Entities.Add(Line(layer.Id, new(2, 2), new(8, 2)));
+
+        Assert.Empty(EntityRectangleSelector.Select(drawing, new(0, 0), new(10, 10), crossing: true));
+    }
+
+    private static DrawingDocument DrawingWithLayer(out DrawingLayer layer)
+    {
+        layer = new DrawingLayer();
+        return new DrawingDocument { Layers = [layer] };
+    }
+
+    private static DrawingEntity Line(Guid layerId, CadPoint start, CadPoint end) =>
+        new() { Kind = EntityKind.Line, LayerId = layerId, Points = [start, end] };
+}
+
 public sealed class DrawingEditJournalTests
 {
     [Fact]

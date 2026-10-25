@@ -17,3 +17,13 @@ public static class ViewportEscapeBehavior
         return hasDrawing ? ViewportEscapeAction.ClearSelection : ViewportEscapeAction.None;
     }
 }
+
+public static class ViewportSelectionBehavior
+{
+    public const double MinimumDragPixels = 4;
+
+    public static bool IsDrag(double deltaX, double deltaY) =>
+        deltaX * deltaX + deltaY * deltaY >= MinimumDragPixels * MinimumDragPixels;
+
+    public static bool IsCrossing(double startX, double currentX) => currentX < startX;
+}
