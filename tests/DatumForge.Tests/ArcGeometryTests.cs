@@ -31,6 +31,14 @@ public sealed class ArcGeometryTests
         AssertPoint(new(-5, 0), ArcGeometry.NearestPoint(arc, new(0, -5)));
     }
 
+    [Fact]
+    public void NearestPointStillChoosesTheStrictlyCloserEndpoint()
+    {
+        Assert.True(ArcGeometry.TryCreate(new(-5, 0), new(0, 5), new(5, 0), out var arc));
+
+        AssertPoint(new(5, 0), ArcGeometry.NearestPoint(arc, new(4, -3)));
+    }
+
     private static void AssertPoint(CadPoint expected, CadPoint actual)
     {
         Assert.Equal(expected.X, actual.X, 8);

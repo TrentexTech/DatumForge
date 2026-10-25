@@ -71,7 +71,10 @@ public static class ArcGeometry
                 arc.Center.X + arc.Radius * Math.Cos(angle),
                 arc.Center.Y + arc.Radius * Math.Sin(angle));
 
-        return Distance(point, arc.Start) <= Distance(point, arc.End) ? arc.Start : arc.End;
+        var startDistanceSquared = DistanceSquared(point, arc.Start);
+        var endDistanceSquared = DistanceSquared(point, arc.End);
+        var tieTolerance = Math.Max(1, Math.Max(startDistanceSquared, endDistanceSquared)) * 1e-12;
+        return startDistanceSquared <= endDistanceSquared + tieTolerance ? arc.Start : arc.End;
     }
 
     public static double DistanceTo(CadArc arc, CadPoint point) => Distance(point, NearestPoint(arc, point));
@@ -110,4 +113,11 @@ public static class ArcGeometry
 
     private static double Distance(CadPoint first, CadPoint second) =>
         Math.Sqrt(Math.Pow(first.X - second.X, 2) + Math.Pow(first.Y - second.Y, 2));
+
+    private static double DistanceSquared(CadPoint first, CadPoint second)
+    {
+        var dx = first.X - second.X;
+        var dy = first.Y - second.Y;
+        return dx * dx + dy * dy;
+    }
 }
