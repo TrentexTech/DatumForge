@@ -40,6 +40,8 @@ The **Arc** tool creates a circular arc from three points: start, a point that t
 
 The **Polyline** tool keeps accepting vertices and previews both its committed segments and the pending segment. Press **Enter**, double-click the final vertex, or right-click to finish the polyline. Press **Escape** to discard the unfinished polyline. A polyline requires at least two distinct vertices.
 
+The **Dimension** tool measures the aligned distance between two distinct points. The live preview and finished object show the dimension line, endpoint witness marks, inward arrowheads, and a measurement label using the drawing's current units. Dimension labels are recalculated from their geometry, so move, rotate, mirror, and scale operations keep the displayed value accurate.
+
 ## Command and coordinate entry
 
 The narrow command bar below the viewport accepts tool names and precise points. Press **Enter** or click the arrow button to submit an entry.

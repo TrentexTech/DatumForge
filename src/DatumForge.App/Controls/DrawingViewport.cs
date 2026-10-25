@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using System.Globalization;
 using DatumForge.Core.Editing;
 using DatumForge.Core.Models;
 using CadRectangleGeometry = DatumForge.Core.Editing.RectangleGeometry;
@@ -481,6 +482,9 @@ public sealed class DrawingViewport : Control
         }
 
         var first = _anchor.Value;
+        if (ActiveTool == "Dimension" && !DimensionGeometry.TryCreate(first, point, out _))
+            return CoordinateSubmissionResult.Failure("A dimension needs two distinct points.");
+
         _anchor = null;
         _previewPoint = null;
         var kind = ActiveTool switch
@@ -761,13 +765,15 @@ public sealed class DrawingViewport : Control
                 context.DrawRectangle(null, pen, new Rect(first, second));
                 break;
             case "Line":
-            case "Dimension":
             case "Move":
             case "Copy":
             case "Rotate":
             case "Scale":
             case "Mirror":
                 context.DrawLine(pen, first, second);
+                break;
+            case "Dimension":
+                DrawDimension(context, pen, anchor, target, null);
                 break;
             default:
                 return;
@@ -878,6 +884,9 @@ public sealed class DrawingViewport : Control
                 for (var index = 1; index < entity.Points.Count; index++)
                     context.DrawLine(pen, ToScreen(entity.Points[index - 1]), ToScreen(entity.Points[index]));
                 break;
+            case EntityKind.Dimension when entity.Points.Count > 1:
+                DrawDimension(context, pen, entity.Points[0], entity.Points[1], entity.Text);
+                break;
             default:
                 context.DrawLine(pen, first, second);
                 break;
@@ -915,6 +924,94 @@ public sealed class DrawingViewport : Control
             if (previous is { } start) context.DrawLine(pen, start, current);
             previous = current;
         }
+    }
+
+    private void DrawDimension(
+        DrawingContext context,
+        Pen pen,
+        CadPoint start,
+        CadPoint end,
+        string? textOverride)
+    {
+        if (!DimensionGeometry.TryCreate(start, end, out var dimension)) return;
+
+        var first = ToScreen(start);
+        var second = ToScreen(end);
+        var dx = second.X - first.X;
+        var dy = second.Y - first.Y;
+        var screenLength = Math.Sqrt(dx * dx + dy * dy);
+        if (screenLength < 0.01) return;
+
+        var direction = new Point(dx / screenLength, dy / screenLength);
+        var normal = new Point(-direction.Y, direction.X);
+        var arrowLength = Math.Min(9, screenLength / 3);
+        var arrowWidth = Math.Min(4, screenLength / 6);
+        const double witnessLength = 5;
+
+        context.DrawLine(pen, first, second);
+        DrawWitnessLine(context, pen, first, normal, witnessLength);
+        DrawWitnessLine(context, pen, second, normal, witnessLength);
+        DrawArrowhead(context, pen, first, direction, normal, arrowLength, arrowWidth);
+        DrawArrowhead(context, pen, second, new Point(-direction.X, -direction.Y), normal, arrowLength, arrowWidth);
+
+        var label = string.IsNullOrWhiteSpace(textOverride)
+            ? DimensionGeometry.Label(dimension, Drawing?.Units ?? DrawingUnits.Millimeters)
+            : textOverride;
+        DrawDimensionLabel(context, pen.Brush ?? Brushes.White, label, first, second, normal);
+    }
+
+    private static void DrawWitnessLine(
+        DrawingContext context,
+        Pen pen,
+        Point point,
+        Point normal,
+        double length)
+    {
+        context.DrawLine(
+            pen,
+            new Point(point.X - normal.X * length, point.Y - normal.Y * length),
+            new Point(point.X + normal.X * length, point.Y + normal.Y * length));
+    }
+
+    private static void DrawArrowhead(
+        DrawingContext context,
+        Pen pen,
+        Point tip,
+        Point direction,
+        Point normal,
+        double length,
+        double width)
+    {
+        var basePoint = new Point(tip.X + direction.X * length, tip.Y + direction.Y * length);
+        context.DrawLine(pen, tip, new Point(basePoint.X + normal.X * width, basePoint.Y + normal.Y * width));
+        context.DrawLine(pen, tip, new Point(basePoint.X - normal.X * width, basePoint.Y - normal.Y * width));
+    }
+
+    private void DrawDimensionLabel(
+        DrawingContext context,
+        IBrush brush,
+        string label,
+        Point first,
+        Point second,
+        Point normal)
+    {
+        if (normal.Y > 0 || Math.Abs(normal.Y) < 1e-9 && normal.X > 0)
+            normal = new Point(-normal.X, -normal.Y);
+
+        var text = new FormattedText(
+            label,
+            CultureInfo.InvariantCulture,
+            FlowDirection.LeftToRight,
+            new Typeface("Inter", FontStyle.Normal, FontWeight.SemiBold, FontStretch.Normal),
+            11,
+            brush);
+        var midpoint = new Point((first.X + second.X) / 2, (first.Y + second.Y) / 2);
+        var center = new Point(midpoint.X + normal.X * 12, midpoint.Y + normal.Y * 12);
+        var origin = new Point(center.X - text.Width / 2, center.Y - text.Height / 2);
+        var background = ParseBrush(Layout?.BackgroundColor, "#101419");
+        background.Opacity = 0.92;
+        context.FillRectangle(background, new Rect(origin.X - 3, origin.Y - 1, text.Width + 6, text.Height + 2));
+        context.DrawText(text, origin);
     }
 
     private Point ToScreen(CadPoint point)

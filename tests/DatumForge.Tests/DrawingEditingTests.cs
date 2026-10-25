@@ -85,6 +85,22 @@ public sealed class EntityHitTesterTests
         Assert.Null(EntityHitTester.HitTest(drawing, new(2, 0), 0.25));
     }
 
+    [Fact]
+    public void HitTestFindsDimensionLine()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        var dimension = new DrawingEntity
+        {
+            Kind = EntityKind.Dimension,
+            LayerId = layer.Id,
+            Points = [new(0, 0), new(10, 0)]
+        };
+        drawing.Entities.Add(dimension);
+
+        Assert.Same(dimension, EntityHitTester.HitTest(drawing, new(5, 0.2), 0.5));
+        Assert.Null(EntityHitTester.HitTest(drawing, new(5, 2), 0.5));
+    }
+
     private static DrawingDocument DrawingWithLayer(out DrawingLayer layer)
     {
         layer = new DrawingLayer();

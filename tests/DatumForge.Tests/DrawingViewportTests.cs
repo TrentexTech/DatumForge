@@ -145,3 +145,40 @@ public sealed class DrawingViewportRectangleTests
             rectangle.Points);
     }
 }
+
+public sealed class DrawingViewportDimensionTests
+{
+    [Fact]
+    public void CoordinateInputCreatesDimensionFromTwoDistinctPoints()
+    {
+        var layer = new DrawingLayer();
+        var drawing = new DrawingDocument { Layers = [layer], Units = DrawingUnits.Millimeters };
+        var viewport = new DrawingViewport { Drawing = drawing, ActiveTool = "Dimension" };
+
+        Assert.False(viewport.SubmitCoordinate("0,0").Completed);
+        var result = viewport.SubmitCoordinate("3,4");
+
+        Assert.True(result.Success);
+        Assert.True(result.Completed);
+        var dimension = Assert.Single(drawing.Entities);
+        Assert.Equal(EntityKind.Dimension, dimension.Kind);
+        Assert.Equal([new CadPoint(0, 0), new CadPoint(3, 4)], dimension.Points);
+    }
+
+    [Fact]
+    public void CoordinateInputRejectsZeroLengthDimensionAndKeepsFirstPoint()
+    {
+        var layer = new DrawingLayer();
+        var drawing = new DrawingDocument { Layers = [layer] };
+        var viewport = new DrawingViewport { Drawing = drawing, ActiveTool = "Dimension" };
+
+        viewport.SubmitCoordinate("2,2");
+        var rejected = viewport.SubmitCoordinate("2,2");
+        var completed = viewport.SubmitCoordinate("5,6");
+
+        Assert.False(rejected.Success);
+        Assert.Contains("distinct", rejected.Message, StringComparison.Ordinal);
+        Assert.True(completed.Completed);
+        Assert.Equal([new CadPoint(2, 2), new CadPoint(5, 6)], Assert.Single(drawing.Entities).Points);
+    }
+}

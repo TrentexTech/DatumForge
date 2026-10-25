@@ -468,6 +468,7 @@ public partial class MainViewModel : ViewModelBase
             "Rotate" or "Scale" => $"{ActiveTool}: choose reference and target points around the selection center",
             "Mirror" => "Mirror: choose two distinct points on the reflection axis",
             "Arc" => "Arc: choose the start, a point on the arc, and the end point",
+            "Dimension" => "Dimension: choose two points to measure their aligned distance",
             _ => $"{ActiveTool}: click in the viewport to draw"
         };
     }
