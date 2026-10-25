@@ -26,6 +26,7 @@ Select entities before choosing a modify tool. Object snapping is evaluated befo
 - **Copy**: choose a base point and then the target for the copied entities. Copies retain geometry and layer ownership but receive new entity IDs.
 - **Rotate**: the selection bounds center is the pivot. Choose a reference point and then a target point to define the angle.
 - **Scale**: the selection bounds center is the origin. Choose a reference point and then a target point to define the distance ratio.
+- **Mirror**: choose two distinct points to define the reflection axis. The selected entities are reflected across that axis while circles retain their radius.
 - **Erase**: click the toolbar action or press **Delete** or **Backspace**.
 
 Degenerate operations, such as a zero-distance move or a rotation reference at the pivot, do not create journal entries.
@@ -48,7 +49,7 @@ Relative points use the active tool's current reference point as their origin—
 
 For a polyline, submit each vertex as a coordinate and then submit an empty command line to finish it.
 
-Commands include `select` (`sel`), `line` (`l`), `polyline` (`pl`), `circle` (`c`), `arc` (`a`), `rectangle` (`rect`), `text` (`t`), `dimension` (`dim`), `move` (`m`), `copy` (`co`), `rotate` (`ro`), `scale` (`sc`), `erase` (`e`), `undo` (`u`), `redo`, `grid`, `ortho`, `polar`, `snap`, and `osnap`.
+Commands include `select` (`sel`), `line` (`l`), `polyline` (`pl`), `circle` (`c`), `arc` (`a`), `rectangle` (`rect`), `text` (`t`), `dimension` (`dim`), `move` (`m`), `copy` (`co`), `rotate` (`ro`), `scale` (`sc`), `mirror` (`mi`), `erase` (`e`), `undo` (`u`), `redo`, `grid`, `ortho`, `polar`, `snap`, and `osnap`.
 
 ## Orthographic tracking
 

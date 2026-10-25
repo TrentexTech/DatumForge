@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using DatumForge.Core.Editing;
 using DatumForge.Core.Models;
+using CadRectangleGeometry = DatumForge.Core.Editing.RectangleGeometry;
 
 namespace DatumForge.App.Controls;
 
@@ -416,7 +417,10 @@ public sealed class DrawingViewport : Control
             _ => EntityKind.Line
         };
         var radius = Math.Sqrt(Math.Pow(point.X - first.X, 2) + Math.Pow(point.Y - first.Y, 2));
-        return AddEntity(kind, [first, point], radius, null)
+        var points = kind == EntityKind.Rectangle
+            ? CadRectangleGeometry.FromOppositeCorners(first, point).ToList()
+            : new List<CadPoint> { first, point };
+        return AddEntity(kind, points, radius, null)
             ? CoordinateSubmissionResult.CompletedInput($"{kind} created.")
             : CoordinateSubmissionResult.Failure("No visible, unlocked layer is available.");
     }
@@ -619,6 +623,7 @@ public sealed class DrawingViewport : Control
             case "Copy":
             case "Rotate":
             case "Scale":
+            case "Mirror":
                 context.DrawLine(pen, first, second);
                 break;
             default:
@@ -717,7 +722,7 @@ public sealed class DrawingViewport : Control
                 context.DrawEllipse(null, pen, new Rect(first.X - r, first.Y - r, r * 2, r * 2));
                 break;
             case EntityKind.Rectangle:
-                context.DrawRectangle(null, pen, new Rect(first, second));
+                DrawClosedPolyline(context, pen, CadRectangleGeometry.Corners(entity.Points));
                 break;
             case EntityKind.Polyline:
                 for (var index = 1; index < entity.Points.Count; index++)
@@ -730,13 +735,22 @@ public sealed class DrawingViewport : Control
 
         if (isSelected)
         {
-            foreach (var grip in entity.Points)
+            IReadOnlyList<CadPoint> grips = entity.Kind == EntityKind.Rectangle
+                ? CadRectangleGeometry.Corners(entity.Points)
+                : entity.Points;
+            foreach (var grip in grips)
             {
                 var screenPoint = ToScreen(grip);
                 context.FillRectangle(Brushes.White, new Rect(screenPoint.X - 3, screenPoint.Y - 3, 6, 6));
                 context.DrawRectangle(new Pen(new SolidColorBrush(Color.Parse("#167FA4")), 1), new Rect(screenPoint.X - 3, screenPoint.Y - 3, 6, 6));
             }
         }
+    }
+
+    private void DrawClosedPolyline(DrawingContext context, Pen pen, IReadOnlyList<CadPoint> points)
+    {
+        for (var index = 0; index < points.Count; index++)
+            context.DrawLine(pen, ToScreen(points[index]), ToScreen(points[(index + 1) % points.Count]));
     }
 
     private void DrawArc(DrawingContext context, Pen pen, CadArc arc)

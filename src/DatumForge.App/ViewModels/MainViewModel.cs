@@ -41,7 +41,7 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<RecentFileEntry> RecentProjects { get; } = [];
     public ObservableCollection<RecentFileEntry> RecentDrawings { get; } = [];
     public IReadOnlyList<string> DrawingTools { get; } = ["Select", "Line", "Polyline", "Circle", "Arc", "Rectangle", "Text", "Dimension"];
-    public IReadOnlyList<string> ModifyTools { get; } = ["Move", "Copy", "Rotate", "Scale"];
+    public IReadOnlyList<string> ModifyTools { get; } = ["Move", "Copy", "Rotate", "Scale", "Mirror"];
 
     [ObservableProperty] public partial ProjectTabViewModel? SelectedProjectTab { get; set; }
     [ObservableProperty] public partial DrawingTabViewModel? SelectedDrawingTab { get; set; }
@@ -299,6 +299,7 @@ public partial class MainViewModel : ViewModelBase
             EntityTransformKind.Copy => _editJournal.Copy(ActiveDrawing, entityIds, reference, target),
             EntityTransformKind.Rotate => _editJournal.Rotate(ActiveDrawing, entityIds, reference, target),
             EntityTransformKind.Scale => _editJournal.Scale(ActiveDrawing, entityIds, reference, target),
+            EntityTransformKind.Mirror => _editJournal.Mirror(ActiveDrawing, entityIds, reference, target),
             _ => 0
         };
         if (count == 0)
@@ -345,6 +346,7 @@ public partial class MainViewModel : ViewModelBase
             "copy" or "co" => "Copy",
             "rotate" or "ro" => "Rotate",
             "scale" or "sc" => "Scale",
+            "mirror" or "mi" => "Mirror",
             _ => null
         };
         if (tool is not null)
@@ -464,6 +466,7 @@ public partial class MainViewModel : ViewModelBase
             "Select" => "Select entities",
             "Move" or "Copy" => $"{ActiveTool}: choose a base point, then a target point",
             "Rotate" or "Scale" => $"{ActiveTool}: choose reference and target points around the selection center",
+            "Mirror" => "Mirror: choose two distinct points on the reflection axis",
             "Arc" => "Arc: choose the start, a point on the arc, and the end point",
             _ => $"{ActiveTool}: click in the viewport to draw"
         };
@@ -704,6 +707,7 @@ public partial class MainViewModel : ViewModelBase
         EntityTransformKind.Copy => "Copied",
         EntityTransformKind.Rotate => "Rotated",
         EntityTransformKind.Scale => "Scaled",
+        EntityTransformKind.Mirror => "Mirrored",
         _ => "Transformed"
     };
 

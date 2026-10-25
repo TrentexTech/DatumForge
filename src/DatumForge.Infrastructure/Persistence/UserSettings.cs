@@ -169,6 +169,7 @@ public static class KeyBindingDefaults
     public const string Copy = "tool.copy";
     public const string Rotate = "tool.rotate";
     public const string Scale = "tool.scale";
+    public const string Mirror = "tool.mirror";
     public const string ToggleGrid = "view.toggle-grid";
     public const string ToggleOrtho = "view.toggle-ortho";
     public const string TogglePolar = "view.toggle-polar";
@@ -193,6 +194,7 @@ public static class KeyBindingDefaults
         [Copy] = string.Empty,
         [Rotate] = string.Empty,
         [Scale] = string.Empty,
+        [Mirror] = string.Empty,
         [ToggleGrid] = "F7",
         [ToggleOrtho] = "F8",
         [TogglePolar] = "F10",

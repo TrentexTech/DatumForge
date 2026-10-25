@@ -69,8 +69,8 @@ public static class ObjectSnapper
                 yield return new ObjectSnapResult(entity.Points[0], ObjectSnapKind.Center, entity.Id, 0);
             else if (TryGetArc(entity, out var arc))
                 yield return new ObjectSnapResult(arc.Center, ObjectSnapKind.Center, entity.Id, 0);
-            else if (entity.Kind == EntityKind.Rectangle && entity.Points.Count > 1)
-                yield return new ObjectSnapResult(Midpoint(entity.Points[0], entity.Points[1]), ObjectSnapKind.Center, entity.Id, 0);
+            else if (entity.Kind == EntityKind.Rectangle && RectangleGeometry.Center(entity.Points) is { } center)
+                yield return new ObjectSnapResult(center, ObjectSnapKind.Center, entity.Id, 0);
         }
 
         if (modes.HasFlag(ObjectSnapMode.Quadrant) &&
@@ -130,7 +130,7 @@ public static class ObjectSnapper
         }
         if (entity.Kind == EntityKind.Rectangle && entity.Points.Count > 1)
         {
-            foreach (var corner in RectangleCorners(entity.Points[0], entity.Points[1])) yield return corner;
+            foreach (var corner in RectangleGeometry.Corners(entity.Points)) yield return corner;
             yield break;
         }
         foreach (var point in entity.Points) yield return point;
@@ -140,7 +140,7 @@ public static class ObjectSnapper
     {
         if (entity.Kind == EntityKind.Rectangle && entity.Points.Count > 1)
         {
-            var corners = RectangleCorners(entity.Points[0], entity.Points[1]);
+            var corners = RectangleGeometry.Corners(entity.Points);
             for (var index = 0; index < corners.Length; index++)
                 yield return new Segment(entity.Id, corners[index], corners[(index + 1) % corners.Length]);
             yield break;
@@ -150,14 +150,6 @@ public static class ObjectSnapper
         for (var index = 1; index < entity.Points.Count; index++)
             yield return new Segment(entity.Id, entity.Points[index - 1], entity.Points[index]);
     }
-
-    private static CadPoint[] RectangleCorners(CadPoint first, CadPoint second) =>
-    [
-        new(Math.Min(first.X, second.X), Math.Min(first.Y, second.Y)),
-        new(Math.Max(first.X, second.X), Math.Min(first.Y, second.Y)),
-        new(Math.Max(first.X, second.X), Math.Max(first.Y, second.Y)),
-        new(Math.Min(first.X, second.X), Math.Max(first.Y, second.Y))
-    ];
 
     private static bool TryIntersect(Segment first, Segment second, out CadPoint intersection)
     {

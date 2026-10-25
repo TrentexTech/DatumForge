@@ -29,7 +29,7 @@ public static class EntityHitTester
             EntityKind.Arc when entity.Points.Count > 2 &&
                                 ArcGeometry.TryCreate(entity.Points[0], entity.Points[1], entity.Points[2], out var arc) =>
                 ArcGeometry.DistanceTo(arc, point) <= tolerance,
-            EntityKind.Rectangle when entity.Points.Count > 1 => RectangleDistance(entity.Points[0], entity.Points[1], point) <= tolerance,
+            EntityKind.Rectangle when entity.Points.Count > 1 => RectangleDistance(entity.Points, point) <= tolerance,
             EntityKind.Polyline => PolylineDistance(entity.Points, point) <= tolerance,
             EntityKind.Text => Distance(entity.Points[0], point) <= tolerance * 1.5,
             _ when entity.Points.Count > 1 => SegmentDistance(entity.Points[0], entity.Points[1], point) <= tolerance,
@@ -46,19 +46,11 @@ public static class EntityHitTester
         return distance;
     }
 
-    private static double RectangleDistance(CadPoint first, CadPoint second, CadPoint point)
+    private static double RectangleDistance(IReadOnlyList<CadPoint> points, CadPoint point)
     {
-        var left = Math.Min(first.X, second.X);
-        var right = Math.Max(first.X, second.X);
-        var bottom = Math.Min(first.Y, second.Y);
-        var top = Math.Max(first.Y, second.Y);
-        var corners = new[]
-        {
-            new CadPoint(left, bottom), new CadPoint(right, bottom),
-            new CadPoint(right, top), new CadPoint(left, top)
-        };
-        return Enumerable.Range(0, 4)
-            .Min(index => SegmentDistance(corners[index], corners[(index + 1) % 4], point));
+        var corners = RectangleGeometry.Corners(points);
+        return Enumerable.Range(0, corners.Length)
+            .Min(index => SegmentDistance(corners[index], corners[(index + 1) % corners.Length], point));
     }
 
     private static double SegmentDistance(CadPoint start, CadPoint end, CadPoint point)

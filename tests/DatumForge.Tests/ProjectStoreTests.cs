@@ -198,6 +198,35 @@ public sealed class ProjectStoreTests : IDisposable
         Assert.Equal(DrawingDocument.CurrentFormatVersion, loaded.FormatVersion);
     }
 
+    [Fact]
+    public async Task SavingVersionTwoRectangleExpandsItToFourCorners()
+    {
+        var path = Path.Combine(_directory, "LegacyRectangle.dfdraw");
+        var layer = new DrawingLayer();
+        var drawing = new DrawingDocument
+        {
+            FormatVersion = 2,
+            Layers = [layer],
+            Entities =
+            [
+                new DrawingEntity
+                {
+                    Kind = EntityKind.Rectangle,
+                    LayerId = layer.Id,
+                    Points = [new CadPoint(1, 2), new CadPoint(5, 6)]
+                }
+            ]
+        };
+
+        await _store.SaveDrawingAsync(path, drawing);
+        var loaded = await _store.LoadDrawingAsync(path);
+
+        Assert.Equal(DrawingDocument.CurrentFormatVersion, loaded.FormatVersion);
+        Assert.Equal(
+            [new CadPoint(1, 2), new CadPoint(5, 2), new CadPoint(5, 6), new CadPoint(1, 6)],
+            Assert.Single(loaded.Entities).Points);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);

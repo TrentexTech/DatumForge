@@ -69,6 +69,22 @@ public sealed class EntityHitTesterTests
         Assert.Same(polyline, EntityHitTester.HitTest(drawing, new(9.8, 7), 0.5));
     }
 
+    [Fact]
+    public void HitTestFollowsRotatedRectangleEdges()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        var rectangle = new DrawingEntity
+        {
+            Kind = EntityKind.Rectangle,
+            LayerId = layer.Id,
+            Points = [new(0, 0), new(2, 2), new(0, 4), new(-2, 2)]
+        };
+        drawing.Entities.Add(rectangle);
+
+        Assert.Same(rectangle, EntityHitTester.HitTest(drawing, new(1, 1.2), 0.25));
+        Assert.Null(EntityHitTester.HitTest(drawing, new(2, 0), 0.25));
+    }
+
     private static DrawingDocument DrawingWithLayer(out DrawingLayer layer)
     {
         layer = new DrawingLayer();
@@ -198,6 +214,32 @@ public sealed class DrawingEditJournalTests
     }
 
     [Fact]
+    public void RotateExpandsLegacyRectangleAndPreservesAllFourCorners()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        var rectangle = new DrawingEntity
+        {
+            Kind = EntityKind.Rectangle,
+            LayerId = layer.Id,
+            Points = [new(0, 0), new(4, 2)]
+        };
+        drawing.Entities.Add(rectangle);
+        var journal = new DrawingEditJournal();
+
+        Assert.Equal(1, journal.Rotate(drawing, [rectangle.Id], new(4, 1), new(2, 3)));
+
+        Assert.Equal(4, rectangle.Points.Count);
+        AssertPoint(new(3, -1), rectangle.Points[0]);
+        AssertPoint(new(3, 3), rectangle.Points[1]);
+        AssertPoint(new(1, 3), rectangle.Points[2]);
+        AssertPoint(new(1, -1), rectangle.Points[3]);
+        Assert.Equal("Rotate entity", journal.Undo(drawing));
+        Assert.Equal([new CadPoint(0, 0), new CadPoint(4, 2)], rectangle.Points);
+        Assert.Equal("Rotate entity", journal.Redo(drawing));
+        Assert.Equal(4, rectangle.Points.Count);
+    }
+
+    [Fact]
     public void ScaleUpdatesPointsAndCircleRadius()
     {
         var drawing = DrawingWithLayer(out var layer);
@@ -210,6 +252,71 @@ public sealed class DrawingEditJournalTests
         Assert.Equal(10, circle.Radius, 8);
         Assert.Equal("Scale entity", journal.Undo(drawing));
         Assert.Equal(5, circle.Radius, 8);
+    }
+
+    [Fact]
+    public void MirrorReflectsGeometryAcrossAxisAndRoundTripsThroughJournal()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        var line = new DrawingEntity
+        {
+            Kind = EntityKind.Line,
+            LayerId = layer.Id,
+            Points = [new(1, 2), new(4, -1)]
+        };
+        var circle = new DrawingEntity
+        {
+            Kind = EntityKind.Circle,
+            LayerId = layer.Id,
+            Points = [new(2, 3)],
+            Radius = 4
+        };
+        drawing.Entities.AddRange([line, circle]);
+        var journal = new DrawingEditJournal();
+
+        Assert.Equal(2, journal.Mirror(drawing, [line.Id, circle.Id], new(5, -10), new(5, 10)));
+        AssertPoint(new(9, 2), line.Points[0]);
+        AssertPoint(new(6, -1), line.Points[1]);
+        AssertPoint(new(8, 3), circle.Points[0]);
+        Assert.Equal(4, circle.Radius);
+        Assert.Equal("Mirror 2 entities", journal.Undo(drawing));
+        AssertPoint(new(1, 2), line.Points[0]);
+        Assert.Equal("Mirror 2 entities", journal.Redo(drawing));
+        AssertPoint(new(8, 3), circle.Points[0]);
+    }
+
+    [Fact]
+    public void MirrorRejectsDegenerateAxis()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        var line = new DrawingEntity { LayerId = layer.Id, Points = [new(1, 2), new(3, 4)] };
+        drawing.Entities.Add(line);
+        var journal = new DrawingEditJournal();
+
+        Assert.Equal(0, journal.Mirror(drawing, [line.Id], new(5, 5), new(5, 5)));
+        Assert.False(journal.CanUndo(drawing.Id));
+        Assert.Equal([new CadPoint(1, 2), new CadPoint(3, 4)], line.Points);
+    }
+
+    [Fact]
+    public void MirrorPreservesRectangleAcrossDiagonalAxis()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        var rectangle = new DrawingEntity
+        {
+            Kind = EntityKind.Rectangle,
+            LayerId = layer.Id,
+            Points = [new(0, 0), new(4, 0), new(4, 2), new(0, 2)]
+        };
+        drawing.Entities.Add(rectangle);
+        var journal = new DrawingEditJournal();
+
+        Assert.Equal(1, journal.Mirror(drawing, [rectangle.Id], new(0, 0), new(5, 5)));
+
+        AssertPoint(new(0, 0), rectangle.Points[0]);
+        AssertPoint(new(0, 4), rectangle.Points[1]);
+        AssertPoint(new(2, 4), rectangle.Points[2]);
+        AssertPoint(new(2, 0), rectangle.Points[3]);
     }
 
     [Fact]

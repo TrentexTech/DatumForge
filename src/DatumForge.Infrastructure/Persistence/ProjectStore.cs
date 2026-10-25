@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DatumForge.Core.Editing;
 using DatumForge.Core.Models;
 
 namespace DatumForge.Infrastructure.Persistence;
@@ -78,6 +79,7 @@ public sealed class ProjectStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(drawingFilePath);
         ArgumentNullException.ThrowIfNull(drawing);
+        NormalizeDrawingGeometry(drawing);
         drawing.FormatVersion = DrawingDocument.CurrentFormatVersion;
         drawing.Revision++;
         drawing.UpdatedAtUtc = DateTimeOffset.UtcNow;
@@ -106,10 +108,16 @@ public sealed class ProjectStore
         var path = ResolveInsideRoot(root, reference.RelativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         if (createHistory && File.Exists(path)) await SnapshotAsync(root, "drawing", drawing.Id, drawing.Revision, path, cancellationToken);
+        NormalizeDrawingGeometry(drawing);
         drawing.FormatVersion = DrawingDocument.CurrentFormatVersion;
         drawing.Revision++;
         drawing.UpdatedAtUtc = DateTimeOffset.UtcNow;
         await WriteAtomicAsync(path, drawing, cancellationToken);
+    }
+
+    private static void NormalizeDrawingGeometry(DrawingDocument drawing)
+    {
+        foreach (var entity in drawing.Entities) RectangleGeometry.Normalize(entity);
     }
 
     private static async Task SnapshotAsync(string root, string scope, Guid id, int revision, string sourcePath, CancellationToken cancellationToken)

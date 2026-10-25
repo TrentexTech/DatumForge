@@ -89,3 +89,23 @@ public sealed class DrawingViewportPolylineTests
         Assert.Equal([new CadPoint(0, 0), new CadPoint(10, 0), new CadPoint(10, 5)], polyline.Points);
     }
 }
+
+public sealed class DrawingViewportRectangleTests
+{
+    [Fact]
+    public void CoordinateInputCreatesRectangleWithFourOrderedCorners()
+    {
+        var layer = new DrawingLayer();
+        var drawing = new DrawingDocument { Layers = [layer] };
+        var viewport = new DrawingViewport { Drawing = drawing, ActiveTool = "Rectangle" };
+
+        Assert.False(viewport.SubmitCoordinate("0,0").Completed);
+        Assert.True(viewport.SubmitCoordinate("4,2").Completed);
+
+        var rectangle = Assert.Single(drawing.Entities);
+        Assert.Equal(EntityKind.Rectangle, rectangle.Kind);
+        Assert.Equal(
+            [new CadPoint(0, 0), new CadPoint(4, 0), new CadPoint(4, 2), new CadPoint(0, 2)],
+            rectangle.Points);
+    }
+}

@@ -51,6 +51,7 @@ public sealed class DrawingEditJournal
         var copies = source.Select(entity =>
         {
             var copy = Clone(entity);
+            RectangleGeometry.Normalize(copy);
             copy.Id = Guid.NewGuid();
             copy.Points = copy.Points.Select(point => new CadPoint(point.X + dx, point.Y + dy)).ToList();
             return copy;
@@ -95,6 +96,18 @@ public sealed class DrawingEditJournal
         });
     }
 
+    public int Mirror(DrawingDocument drawing, IEnumerable<Guid> entityIds, CadPoint axisStart, CadPoint axisEnd)
+    {
+        var axisX = axisEnd.X - axisStart.X;
+        var axisY = axisEnd.Y - axisStart.Y;
+        if (axisX * axisX + axisY * axisY < 1e-18) return 0;
+
+        return Transform(drawing, entityIds, "Mirror", entity =>
+            entity.Points = entity.Points
+                .Select(point => EntityGeometry.ReflectAcrossLine(point, axisStart, axisEnd))
+                .ToList());
+    }
+
     public string? Undo(DrawingDocument drawing)
     {
         var state = StateFor(drawing.Id);
@@ -127,7 +140,11 @@ public sealed class DrawingEditJournal
         var entities = EditableEntities(drawing, entityIds).ToArray();
         if (entities.Length == 0) return 0;
         var before = entities.Select(Clone).ToArray();
-        foreach (var entity in entities) transform(entity);
+        foreach (var entity in entities)
+        {
+            RectangleGeometry.Normalize(entity);
+            transform(entity);
+        }
         var after = entities.Select(Clone).ToArray();
         Push(drawing.Id, new TransformEntitiesEdit(description, before, after));
         return entities.Length;

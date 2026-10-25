@@ -2,7 +2,7 @@ using DatumForge.Core.Models;
 
 namespace DatumForge.Core.Editing;
 
-public enum EntityTransformKind { Move, Copy, Rotate, Scale }
+public enum EntityTransformKind { Move, Copy, Rotate, Scale, Mirror }
 
 public static class EntityGeometry
 {
@@ -32,6 +32,21 @@ public static class EntityGeometry
         var referenceDistance = Distance(center, reference);
         if (referenceDistance < 1e-9) return double.NaN;
         return Distance(center, target) / referenceDistance;
+    }
+
+    public static CadPoint ReflectAcrossLine(CadPoint point, CadPoint axisStart, CadPoint axisEnd)
+    {
+        var axisX = axisEnd.X - axisStart.X;
+        var axisY = axisEnd.Y - axisStart.Y;
+        var lengthSquared = axisX * axisX + axisY * axisY;
+        if (lengthSquared < 1e-18) return point;
+
+        var relativeX = point.X - axisStart.X;
+        var relativeY = point.Y - axisStart.Y;
+        var position = (relativeX * axisX + relativeY * axisY) / lengthSquared;
+        var projectedX = axisStart.X + position * axisX;
+        var projectedY = axisStart.Y + position * axisY;
+        return new CadPoint(2 * projectedX - point.X, 2 * projectedY - point.Y);
     }
 
     private static IEnumerable<CadPoint> BoundsPoints(DrawingEntity entity)

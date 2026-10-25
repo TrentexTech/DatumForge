@@ -132,6 +132,18 @@ public sealed class MainViewModelTests : IDisposable
     }
 
     [Fact]
+    public void MirrorCommandSelectsTheMirrorTool()
+    {
+        var viewModel = new MainViewModel(new ProjectStore(), new UserSettingsStore(Path.Combine(_directory, "settings")));
+
+        viewModel.UpdateSelection([Guid.NewGuid()]);
+
+        Assert.True(viewModel.TryExecuteTextCommand("mi"));
+        Assert.Equal("Mirror", viewModel.ActiveTool);
+        Assert.Contains("reflection axis", viewModel.StatusText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ViewportNavigationIsStoredInUserSettingsWithoutDirtyingProject()
     {
         var store = new ProjectStore();

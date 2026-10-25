@@ -95,6 +95,25 @@ public sealed class ObjectSnapperTests
     }
 
     [Fact]
+    public void FindsRotatedRectangleCornersMidpointsAndCenter()
+    {
+        var drawing = DrawingWithLayer(out var layer);
+        drawing.Entities.Add(new DrawingEntity
+        {
+            Kind = EntityKind.Rectangle,
+            LayerId = layer.Id,
+            Points = [new(0, 0), new(2, 2), new(0, 4), new(-2, 2)]
+        });
+
+        Assert.Equal(new CadPoint(2, 2), ObjectSnapper.FindNearest(
+            drawing, new(2.1, 2), 1, ObjectSnapMode.Endpoint)?.Point);
+        Assert.Equal(new CadPoint(1, 1), ObjectSnapper.FindNearest(
+            drawing, new(1.1, 1), 1, ObjectSnapMode.Midpoint)?.Point);
+        Assert.Equal(new CadPoint(0, 2), ObjectSnapper.FindNearest(
+            drawing, new(0.1, 2), 1, ObjectSnapMode.Center)?.Point);
+    }
+
+    [Fact]
     public void FindsCircleQuadrants()
     {
         var drawing = DrawingWithLayer(out var layer);
